@@ -1,0 +1,601 @@
+// Adobe Javascript for grants and contracts checklist written and developed by Rick Saldana at Texas Divisional Headquarters in 2024;
+// Hope u guize liek dis (:
+
+function autoBudget(){
+    const lineItems = ["inCash.", "inMatch.", "grantEx.", "matchEx."];
+    const totalFields = ["icTotal", "meTotal", "geTotal", "meTotal"];
+    var currentBox = "None";
+    var subTotals = {
+        icTotal : 0,
+        imTotal : 0,
+        geTotal : 0,
+        meTotal : 0,
+        getField: function (fieldName) {
+            return this[fieldName] !== undefined ? { value: this[fieldName] } : null;
+        }
+    }
+    function boxHandler(){
+        const boxGroup = ["alotBox", "pdrBox", "exBox", "deBox"];
+        
+        var boxStatus = {
+            "alotBox" : "Off",
+            "pdrBox" : "Off",
+            "exBox" : "Off",
+            "debox" : "Off"
+        }
+        var boxFieldHider = {
+            alotBox : ["alotValue"],
+            pdrBox : ["pdrCost", "pdrUnit", "pdrDays", "inputCost", "inputUnit", "inputDays"],
+            exBox : ["other2"],
+            deBox : ["deoblig"],
+            getField: function (fieldName) {
+                return this[fieldName] !== undefined ? { value: this[fieldName] } : null;
+            } 
+        }
+        function checkBox() {
+            for (i = 0; i < boxGroup.lenth; i++){
+                var field = this.getField(boxGroup[i]);
+                switch(i) {
+                    case 0: 
+                    case 1:
+                    case 2:
+                    case 3:
+                    case 4:
+                        if (field.value === "Yes") {
+                            currentBox = field;
+                            boxStatus[box].value = "Yes";
+                            boxValidator(currentBox);
+                        } 
+                        break;
+                    default:
+                        currentBox = "None";
+                        branchBoxes();
+                        break;
+                }
+            }
+        }
+        checkBox(); 
+        
+        function boxValidator() {
+            var checks = 0;
+            for (let stat in boxStatus) {
+                stat.value === "Yes" ? checks += 1 : checks += 0;
+            }
+            if (checks > 1) { 
+                for (let stat in boxStatus) {
+                    stat == currentBox ? stat : boxStatus.stat.value= "Off"; 
+                }
+            }
+            boxDisplay(checks);
+        }
+
+        function boxDisplay(){
+            if (checks > 1) {
+            }
+            for (let key in boxFieldHider){
+                let field = boxFieldHider.getField(boxFieldHider[i]);
+                if (currentBox == key){
+                    field.display = display.visible;
+                } else {
+                    
+                }   
+            }
+            branchBoxes(currentBox);
+        }
+        
+        // forked path for line item calculations
+        function branchBoxes() {
+            switch(currentBox){
+                case alotBox:
+                    runAlotTotals();
+                    return;
+                case pdrBox:
+                    runPdrTotals();
+                    return;
+                case exBox: 
+                    runTotals(exBox);
+                    return;
+                case deBox:
+                    runTotals(deBox);
+                    return;
+                default:
+                    runTotals();
+            }
+        } 
+    }
+
+    
+    function runTotals() {
+        for (let i = 0; i < lineItems.length; i++){
+            var runTotal = 0;
+            switch(i) {
+                case 0:
+                    for (let j = 0; j < 12; j++){
+                        var field = this.getField(lineItems[i] + j);
+                        if (deBox) {
+                            field.display = display.hidden;
+                            runTotal = 0
+                            return;
+                        } else {
+                            runTotal += parseFloat(field.value) || 0;
+                        }
+                    }
+                    subTotals.icTotal = runTotal;
+                    break;
+
+                case 1: 
+                    for (let j = 0; j < 12; j++){
+                        var field = this.getField(lineItems[i] + j);
+                        if (deBox) {
+                            field.display = display.hidden;
+                            runTotal = 0
+                            return;
+                        } else {
+                            runTotal += parseFloat(field.value) || 0;
+                        }
+                    }
+                    subTotals.imTotal = runTotal;
+                    break;
+                case 2:
+                    for (let j = 0; j < 20; j++){
+                        var field = this.getField(lineItems[i] + j);
+                        runTotal += parseFloat(field.value) || 0;
+                        if (debox) {
+                            subTotals.geTotal = runTotal;
+                            subTotals.icTotal = runTotal;
+                            return;
+                            
+                        } else {}
+                            subTotals.geTotal = runTotal;
+                    }
+                    if (j === 0 && field.value !== ""){
+                        calculateSalary();
+                    }
+                    break;
+                case 3: 
+                    for (let j = 0; j < 20; j++){
+                        var field = this.getField(lineItems[i] + j);
+                        runTotal += parseFloat(field.value) || 0;
+                        if (j === 0 && field.value !== ""){
+                            salary == true ? salary = false : calculateSalary();
+                        }
+                    }
+                    subTotals.meTotal = runTotal;
+                    break;
+            }
+        }
+        fieldSubTotals();
+    }
+
+    // template for inMatch, grantEx, and matchEx line items for alot and pdr.
+    function runLineItems(){
+        var salary = false;
+        for (let i = 1; i < lineItems.length; i++){
+            var runTotal = 0;
+            switch(i) {
+                case 1: 
+                    for (let j = 0; j < 12; j++){
+                        var field = this.getField(lineItems[i] + j);
+                        runTotal += parseFloat(field.value) || 0;
+                    }
+                    subTotals.imTotal = runTotal;
+                    break;
+                case 2:
+                    for (let j = 0; j < 20; j++){
+                        var field = this.getField(lineItems[i] + j);
+                        runTotal += parseFloat(field.value) || 0;
+                    }
+                    if (j === 0 && field.value !== ""){
+                        salary = true;
+                        calculateSalary();
+                    }
+                    break;
+                case 3: 
+                    for (let j = 0; j < 20; j++){
+                        var field = this.getField(lineItems[i] + j);
+                        runTotal += parseFloat(field.value) || 0;
+                        if (j === 0 && field.value !== ""){
+                            salary == true ? salary = false : calculateSalary();
+                        }
+                    }
+                    subTotals.meTotal = runTotal;
+                    break;
+            }
+        }
+    }
+
+    function runPdrTotals() {
+        for (let i = 3; i < pdrFields.length; i++){
+            var field = this.getField(pdrFields[i]);
+            var cost = 0;
+            var unit = 0;
+            var days = 0;
+            if (!isNaN(field.value) && field.value !== ""){
+                switch(i) {
+                    case 3: 
+                       cost = parseFloat(field.value) || 0;
+                       break;
+                    case 4: 
+                        unit = parseFloat(field.value) || 0;
+                        break;
+                    case 5: 
+                        days = parseFloat(field.value) || 0;
+                        break;
+                }
+            }
+        }
+        var pdrTotal = cost * unit * days;
+        subTotals.icTotal = pdrTotal;
+        runLineItems();
+        fieldSubTotals();
+    }
+
+    
+    function runAlotTotals(){
+        var alotValue = this.getField("alotValue");
+        if (alotValue.value !== "") {
+            subTotals.icTotal = parseFloat(alotValue.value);
+        }
+        runLineItems();
+        fieldSubTotals();
+    }
+
+    function fieldSubTotals() {
+        for (let i = 0; i < totalFields.length; i++) {
+            let field = subTotals.getField(totalFields[i]);
+            if (field) {
+                switch (i) {
+                    case 0:
+                        field.value = subTotals.icTotal;
+                        break;
+                    case 1:
+                        field.value = subTotals.imTotal;
+                        break;
+                    case 2:
+                        field.value = subTotals.geTotal;
+                        break;
+                    case 3:
+                        field.value = subTotals.meTotal;
+                        break;
+                }
+            }
+        }
+        internalFees(currentBox);
+    }
+
+    function internalFees() {
+        const ssRates = {
+            tentwo : 0.118,
+            ten : 0.1,
+            two : 0.018
+        }
+        
+        var suppServ = {
+            sscash : 0,
+            ssmatch: 0,
+            grantss : {
+                "grantss.0" : 0,
+                "grantss.1" : 0,
+            },
+            matchss : {
+                "matchss.0" : 0,
+                "matchss.1" : 0
+            },
+            getField: function (fieldName) {
+                return this[fieldName] !== undefined ? { value: this[fieldName] } : null;
+            }
+        }
+        if (currentBox !== "None" || currentBox == pdrBox) {
+            exemptFees();
+        } else {
+            tenAndTwo();
+        }
+
+        function exemptFees(){
+            for (var i = 0; i < suppServ.length; i++){
+                let field = suppServ.getField(suppServ[i]);
+                field.value = 0;
+            }
+            runGrandTotals();
+        }
+
+        function tenAndTwo() {
+            for (var i = 0; i < totalFields.length; i++){
+                let field = totalFields.getField(totalFields[i]);
+                switch(i){
+                    case 0: 
+                        suppServ.sscash = subTotals.icTotal * ssRates.tentwo;
+                        field.value = suppServ.sscash;
+                        break;
+                    case 1: 
+                        suppServ.ssmatch = subTotals.imTotal * ssRates.tentwo;
+                        field.value = suppServ.ssmatch;
+                        break;
+                    case 2: 
+                        for (let j = 0; j < 2; j++){
+                            suppServ.grantss["grantss." + j] = subTotals.geTotal * (j = 0 ? ssRates.ten : ssRates.two);
+                            field.value = suppServ.grantss["grantss." + j].value;
+                        }
+                        break;
+                    case 3:
+                        for (let j = 0; j < 2; j++){
+                            suppServ.matchss["matchss." + j] = subTotals.meTotal * (j = 0 ? ssRates.ten : ssRates.two);
+                            field.value = suppServ.matchss["matchss." + j].value;
+                        }
+                        break;
+                }
+            }
+            runGrandTotals();
+        }
+    }
+    
+    function runGrandTotals() {
+        var grandTotalFields = ["icGrand", "meGrand", "geGrand", "meGrand"];
+
+        var grandTotals = {
+            "icGrand" : 0,
+            "imGrand" : 0,
+            "geGrand" : 0,
+            "meGrand" : 0,
+            getField: function (fieldName) {
+                return this[fieldName] !== undefined ? { value: this[fieldName] } : null;
+            }
+        }
+
+        for (var i = 0; i < grandTotalFields.length; i++){
+            let field = grandTotals.getField(grandTotalFields[i]);
+            if (field) {
+                switch (i) {
+                    case 0:
+                        field.value = grandTotals.icGrand;
+                        break;
+                    case 1:
+                        field.value = grandTotals.imGrand;
+                        break;
+                    case 2:
+                        field.value = grandTotals.geGrand;
+                        break;
+                    case 3:
+                        field.value = grandTotals.meGrand;
+                        break;
+                }
+            }
+        }
+        validateTotals(grandTotals);
+    }
+
+    function validateTotals() {
+
+        var validtab = this.getField("validtab");
+        var balanced = "Budget is balanced successfully!";
+        var idle = "Budget Validator";
+        var errors = [];
+
+        if ( grandTotals.icGrand !== grandTotals.geGrand) {
+            errors.push("The Cash Grand Total and Grant Grand Total are not identical!");
+            icGrand.fillColor = color.red;
+            geGrand.fillColor = color.red;
+        } else {
+            icGrand.fillColor = color.white;
+            geGrand.fillColor = color.white;
+        }
+        if ( grandTotals.imGrand !== grandTotals.meGrand) {
+            errors.push("The Match Income Grand Total and the Match Expenditure Grand Total are not identical!");
+            imGrand.fillColor = color.red;
+            meGrand.fillColor = color.red;
+        } else {
+            imGrand.fillColor = color.white;
+            meGrand.fillColor = color.white;
+        }
+        if (icGrand.value == 0 && geGrand.value == 0 && imGrand.value == 0 && meGrand.value == 0){
+            validtab.value = idle;
+            validtab.fillColor = color.white;
+        } else if (errors.length > 0) {
+            validtab.value = "Budget is not balanced! " + errors.join(" ");
+            validtab.fillColor = color.red;
+        } else {
+            validtab.value = balanced;
+            validtab.fillColor = color.green;
+        } 
+    }
+
+    function calculateSalary() {
+        var calcFields = ["calcQuant.", "newExist.", "fullPart.", "jobTitle.", "timePercent.", "calcFringe.", "calcSalary."];
+        var staffTotal = parseInt(this.getField("staffTotal").value);
+        var salaryCalculator = this.getField("salaryCalculator");
+        var ON = "Calculator is ON. Please enter the number of staff positions to be covered by this contract using the dropdown menu to the right.";
+        var OFF = "No staff salaries detected. Calculator is OFF.";
+
+        const resultText = {
+            "calcResult." : i,
+            "calcQuant." : "",
+            "newExist." : "",
+            "fullPart." : "",
+            "jobTitle." : "",
+            "timePercent." : "",
+            "calcFringe." : "",
+            "calcSalary." : ""
+        }
+
+        function onOFF(){
+            if (salary) {
+                salaryCalculator.value = ON; 
+                salaryCalculator.fillColor = color.green; 
+                staffTotal.display = display.visible;
+            } else {
+                salaryCalculator.value = OFF; 
+                salaryCalculator.fillColor = color.white; 
+                staffTotal.display = display.hidden;
+                return;
+            }
+        }
+        onOFF();
+        if (parseInt(staffTotal) > 1 ) {
+            resultCloner();
+        }
+
+        function resultCloner() {
+            const clones = {}
+            for (let i = 0; i < parseInt(staffTotal.value); i ++){
+                clones["staff." + i] = {};
+                for (const [key, value] of Object.entries(resultText)) {
+                    clones["staff." + i][key + i] = value;
+                }
+                clones["staff." + i][key + i] = i;
+            }
+            
+            return clones;
+            }
+            runCalc();
+        }
+
+        function runCalc() {
+            for (let i = 0; i < parseInt(staffTotal.value); i++) {
+                var question = this.getField("question");
+                resultTextArray.push(resultText);
+                if (parseInt(staffTotal.value) > 4) {
+                    validtab.value = parseInt(staffTotal.value) + " staff salaries detected! Please upload staff salary details in a separate document in TSAMM!";
+                    validtab.fillColor = color.red;
+                    calcReset(staffTotal);
+                    return;
+                }
+                for (let j = 0; j < calcFields.length; j++) {
+                    var field = this.getField(calcFields[j] + i);
+                    switch(parseInt(staffTotal.value)){
+                        case 0:
+                            calcReset(staffTotal);
+                            return;
+                        default:
+                            question.display = display.visible;
+                            field.display = display.visible;
+                            if ( field.value !== "") {
+                                resultText[i][calcFields[j]] = field.value;
+                            }
+                            break;
+                    }
+                }
+            }
+            calcResult(staffTotal);
+        }
+
+        function calcResult(staffTotal){
+            var calcResult = this.getField(resultText["calcResult." + i]);
+            resultCloner(staffTotal);
+            for (let x = 0; x < calcFields.length; x ++) {
+                var key = calcFields[x];
+                var syn = {
+                    suffix: (textClones[i]["calcQuant."].value > 1) ? "s" : "",
+                    each: (resultText[i]["calcQuant."].value > 1) ? "each @" : "@",
+                    of: "of",
+                    sal: "in salary.",
+                    frin: "in fringe benefits &",
+                    total: (resultText[i]["calcSalary."].value + resultText[i]["calcFringe."].value)
+                }
+                switch(x){
+                    case 3: 
+                        text.push((resultText[i][key] + syn.suffix) + syn.each);
+                        break;
+                    case 4: 
+                        text.push(resultText[i][key] + syn.of);
+                        break;
+                    case 5: 
+                        text.push(resultText[i][key].toLocaleString("en-US", {
+                            style: "currency",
+                            currency: "USD",
+                        }) + frin);
+                        break;
+                    case 6: 
+                        text.push(resultText[i][key].toLocaleString("en-US", {
+                            style: "currency",
+                            currency: "USD",
+                            }) + sal);
+                        break;
+                    default:
+                        text.push(resultText[i][key]);
+                }
+            }
+            text.push(" = " + total.toLocaleString("en-US", {
+                style: "currency",
+                currency: "USD",
+            }));
+            calcResult.value = text.join(" ");
+        }
+        staffChange();
+
+        function staffChange (){
+            var change = this.getField("change");
+            if (change.value === "Yes"){
+                var datePrompt = [];
+                for (let i = 0; i < staffDates.length; i++){
+                    var staffDates = ["fundFrom", "fundTo"];
+                    var field = this.getField(staffDates[i]);
+                    if (!field || field.value == ""){
+                        var dateError = "Error in Funding Term Fields. Please go to page 1 and ensure they are filled out.";
+                        salaryCalculator.value = dateError;
+                        salaryCalculator.fillColor = color.red;
+                    } else {
+                    (i == 0) ? datePrompt.push("Pleae enter the month between " + field.value) : datePrompt.push(field.value + "when this change is projected to occur.");
+                    }
+                }
+                salaryCalculator.value = datePrompt.join(" and ");
+            }
+        }
+    
+    function resetValues() { 
+        var lineItems = ["inCash.", "inMatch.", "grantEx.", "matchEx."];
+        var totalItem = ["icTotal", "imTotal", "geTotal", "meTotal"];
+        var suppServ = ["sscash", "ssmatch", "grantss.0", "grantss.1", "matchss.0", "matchss.1"];
+
+        for (var j = 0; j < 4; j++){
+            var item = lineItems[j];
+            switch (j){
+                case 0:
+                case 1: 
+                    for (var i = 0; i < 12; i ++){
+                    var fieldName = item + i;
+                    var field = this.getField(fieldName);
+                    field.value = "";
+                    }
+                    break;
+                case 3:
+                case 4: 
+                    for (var i = 0; i < 20; i ++){
+                    var fieldName = item + i;
+                    var field = this.getField(fieldName);
+                    field.value = "";
+                    }
+                    break;
+            }
+            var totalField = totalItem[i];
+            var total = this.getField(totalField);
+            total.value = 0;
+        }
+        for (var x = 0; x < suppServ.length; x++) {
+            var fieldName = suppServ[x];
+            var field = this.getField(fieldName);
+            field.value = 0;
+        }
+        if (!alotCheck) {
+            var alotValue = this.getField("alotValue");
+            alotValue.value = "";
+            this.getField("alotValue").display = display.hidden;
+        }
+        if (!pdrCheck) {
+            var pdrFields = ["pdrCost", "pdrUnit", "pdrDays", "inputCost", "inputUnit", "inputDays"];
+            for (var i = 0; i < pdrFields.length; i++) {
+                var fieldName = pdrFields[i];
+                var field = this.getField(fieldName);
+                if (i > 3) {
+                    field.value = "";
+                }
+                field.display = display.hidden;
+            }
+        }
+    }
+    validateTotals();
+    boxHandler();
+    runTotals();
+    internalFees();
+}
+autoBudget(); 
+boxHandler();
