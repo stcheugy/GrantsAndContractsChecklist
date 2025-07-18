@@ -99,16 +99,15 @@ Special Modes:
 
 ## Flowchart Summary
 
-```mermaid
 flowchart TD
     Start[User begins form] -->|Inputs value in budget line| BudgetInput[Trigger: Line Mode Logic]
     BudgetInput --> RunTotals1[RunTotals → valueHandler → setFieldValues]
     RunTotals1 --> ValidateTotals1[Validate Totals → display result]
-
+    ---
     CheckBox[User checks a mode box (PDR, Deobligation, Non-Monetary)] --> BoxToggleLogic[boxToggle processes mode switch]
     BoxToggleLogic --> UpdateFields[Update labels, visibility, and instructions]
     UpdateFields --> RunTotals2[Trigger runTotals with new mode flag]
-
+    ---
     RunTotals2 -->|PDR Mode| PDRBranch[Use unit * rate logic → auto-calculate subtotal]
     PDRBranch --> ValidateTotals2[PDR Validator Checks (looser constraints)]
 
@@ -119,7 +118,6 @@ flowchart TD
     NonMonetaryBranch --> ValidateTotals4[Confirm zeroed or non-financial fields only]
 
     AnyValidation[Validation Step] --> Validator[Display message, color, success or error]
-```
 
 ---
 
