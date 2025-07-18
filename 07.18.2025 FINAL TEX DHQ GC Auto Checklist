@@ -1,0 +1,741 @@
+function makeFieldCache(context) {
+  var cache = {};
+  return function(fieldName) {
+    if (!fieldName) return null;
+    if (!(fieldName in cache)) {
+      cache[fieldName] = context.getField(fieldName);
+    }
+    return cache[fieldName];
+  }
+}
+var getFieldCache = makeFieldCache(this);
+function log (label, val) {
+  console.println(label + ": " + JSON.stringify(val) + "\n");
+}
+function arrayIncludes(arr, val) {
+  for (var a = 0; a < arr.length; a++) {
+    if (arr[a] === val){
+      return true;
+    }
+  }
+  return false;
+}
+function functionSequence(name,actionArg){
+  log("Function Sequence with",name);
+  
+  function deobligationMode(dTotal, totalName) {
+    var totalPairs = {
+      cashGrant: ["icTotal", "geTotal"],
+      matchMatch: ["imTotal", "meTotal"]
+    }
+    var grandTotals = {
+      cashGrant: ["icGrand","geGrand"],
+      matchMatch: ["imGrand","meGrand"]
+    }
+    var tHolder = {};
+    var index = 1;
+
+    for (var t in totalPairs) {
+      var tName = totalPairs[t];
+      if (tName[0] === totalName) {
+        tHolder.sibling = tName[1];
+        tHolder.grand0 = grandTotals[t][0];
+        tHolder.grand1 = grandTotals[t][1];
+        break;
+      } else if (tName[1] === totalName) {
+        tHolder.sibling = tName[0];
+        index = 0
+        tHolder.grand0 = grandTotals[t][0];
+        tHolder.grand1 = grandTotals[t][1];
+        break;
+      }
+    }
+
+    if (!tHolder.sibling){
+      log("Deobligation Mode failed, Name Not Found",totalName);
+      return false;
+    }
+
+    var deLog = [];
+    var otherField = getFieldCache("other." + index);
+    var otherText = otherField ?  "Deobligation" : "";
+    otherField.value = otherText;
+
+    for (var th in tHolder){
+      var dField = getFieldCache(tHolder[th]);
+      if (!dField || "grand" + index === th) continue;
+      var dValue = dField && otherField ? parseFloat(dTotal) : 0;
+      dField.value = dValue;
+      deLog.push(th + "—" + tHolder[th]);
+    }
+   
+    log("Deobligation Sibling, Action, and Value",deLog.join(", "));
+    
+    return true;
+  }
+  function runInputs(boxArg, inputName) {
+    if (!boxArg && inputName !== "icTotal") return 0;
+    var vals = [1,1,1];
+    var countBox = boxArg === "pdrBox" ? 3 : 1;
+    for (var i = 0; i < countBox; i++) {
+      var inf = getFieldCache("input." + i);
+      if (!inf) continue;
+      var infVal = inf ? parseFloat(inf.value) : 0;
+      vals[i] = infVal;
+    }
+    var total = parseFloat(vals[0] * vals[1] * vals[2]) || 0;
+    if (isNaN(total)) total = 0;
+    return total;
+  }
+  function runLines(lineName,count) {
+    var lineNames = {
+      icTotal: "inCash.",
+      imTotal: "inMatch.",
+      geTotal: "grantEx.",
+      meTotal: "matchEx."
+    };
+    var total = 0;
+    for (var i = 0; i < count; i++) {
+      var fName = lineNames[lineName] + i;
+      var f = getFieldCache(fName);
+      if (!f) continue;
+      var fValue = parseFloat(f.value);
+      i === 0 && !prefix && !!fValue ? calculateSalary.call(this,0) : calculateSalary.call(this,1);
+      total += fValue;
+    }
+    return total;
+  }
+  var findBox = findBoxes();
+  var stFieldNames = ["icTotal","imTotal","geTotal","meTotal"];
+  var stValueCache = {}
+
+  if (name !== "action" && !arrayIncludes(stFieldNames,name)){
+    log("Name Not Found",name);
+    return 0; 
+  }
+
+  for (var st = 0; st < stFieldNames.length; st++){
+    var fieldCacheName = stFieldNames[st] + "Cache";
+    var fieldCache = getFieldCache(fieldCacheName);
+    if (!fieldCache) continue;
+    var fieldCacheValue = fieldCache ? parseFloat(fieldCache.value) : 0;
+    stValueCache[stFieldNames[st]] = fieldCacheValue;
+  }
+  var cachedField = getFieldCache(name + "Cache");
+
+  var fieldNames = {
+    icTotal: { fee1: "sscash", fee2: "skip", grand: "icGrand" },
+    imTotal: { fee1: "ssmatch", fee2: "skip", grand: "imGrand" },
+    geTotal: { fee1: "grantss.0", fee2: "grantss.1", grand: "geGrand" },
+    meTotal: { fee1: "matchss.0", fee2: "matchss.1", grand: "meGrand" },
+  }
+  var count = name === "icTotal" || name ===  "imTotal" ? 12 : 20;
+
+  if (!!actionArg) {
+    var setReset = setFieldValues(actionArg,false,false);
+    log("Action Argument Success", setReset);
+    return 0;
+  }
+
+  var inputMode = name === "icTotal" && !!findBox;
+  var total = inputMode ? runInputs(findBox, name) : runLines(name, count);
+  var cacheValue = cachedField ? parseFloat(cachedField.value) : 0;
+
+  if (total === cacheValue){
+    log("Value Guard Activated, No Change in Total",true);
+    return total;
+  } else cachedField.value = total;
+
+  var valueObj = valueHandler(total,name);
+  var nameObj = fieldNames[name];
+  var grandObj = {}
+  var zeroStatus = true;
+
+  for (var l in fieldNames){
+    var liveObj = fieldNames[l];
+    for (var g in fieldNames[l]){
+      var grandName = !liveObj[g] ? "skip" : liveObj[g];
+      var grandField = getFieldCache(grandName);
+      if (!grandField || grandName === "skip") continue;
+      var grandV = grandField ? parseFloat(grandField.value) : 0 || 0;
+      if (grandV !== 0 && !isNaN(grandV)) zeroStatus = false;
+      grandObj[l] = {name: grandName, value: grandV}
+    }
+  }
+
+  var deob = total < 0 ? deobligationMode(primeValue,name) : false;
+  var pdrAmount = findBox === "pdrBox" && name === "icTotal" ? total : false;
+
+  function validationArg(){
+    var zero = {action: "zero", value: "zero"}
+    var deobligate = {action: "deobligate", value: "neg"}
+    var validBox = {action:"box", value: findBox}
+    var validPdr = {action: "pdrBox", value: pdrAmount}
+
+    if (zeroStatus) return zero;
+    if (deob) return deobligate;
+    if (!!findBox && findBox !== "pdrBox") return validBox;
+    if (!!pdrAmount) return validPdr;
+    return false;
+  }
+
+  var setFields = setFieldValues(false,nameObj,valueObj);
+  log("Set Success", setFields);
+
+  var validator = getFieldCache("validator");
+  var validArg = validator ? validationArg() : "Validator Malfunction!";
+  var validationMsg = validateTotals(validArg);
+  if (validator) validator.value = validationMsg;
+
+  log("Field Name",name);
+  log("Prime Value",total);
+  var inputMsg = inputMode ? "Input Mode with " + findBox + " as an argument" : "Run Totals Mode with No Box Arguments";
+  log("Calculation Mode", inputMsg);
+  log("Validation Message",validationMsg);
+  var deobligate = !deob || deob === null ? "Deobligation mode was not executed" || "Deobligation Mode was attempted but failed" : "Deobligation mode was executed";
+  log("Deobligation Mode", deobligate);
+  return total;
+}
+function boxToggle(boxName) {
+  var boxLog = !boxName ? "No Box Arguments" : boxName + " Passed as an Argument";
+  log("BoxToggle Function Begins With",boxLog);
+
+  var boxField = getFieldCache(boxName);
+  var boxNames = ["alotBox", "exBox", "pdrBox"];
+  var fieldNames = ["input.", "text."];
+  var check = boxField && boxField.value === "Yes" ? "Yes" : "Off";
+  var viz = !boxName || check !== "Yes" ? 1 : 0;
+
+  log(boxName, check);
+  var viz = functionSequence.call(this,"icTotal",{action: "visibility", value: viz}) ;
+  log("Visibility Result",viz); log("Set Success",set);
+  
+  var boxFields = {
+    alotBox: ["Enter non monetary, allotment, or credit value"],
+    exBox: ["Enter FEMA or EFSP income ONLY"],
+    pdrBox: [
+      "Enter the cost per unit rate",
+      "Enter the number of units e.g. beds",
+      "Enter the number of days of this term"
+    ]
+  }
+  var boxText = boxFields[boxName];
+
+  for (var k = 0; k < boxNames.length; k++) {
+    var inputField = getFieldCache(fieldNames[0] + k);
+    var textField = getFieldCache(fieldNames[1] + k);
+    var otherBox = getFieldCache(boxNames[k]);
+    var otherCheck = otherBox && otherBox.value === "Yes";
+    if (otherCheck && !!boxName && boxNames[k] !== boxName) otherBox.value = "Off";
+
+    if (!inputField || !textField) continue;
+    var clear = k >= boxText.length;
+
+    textField.value = check !== "Yes" || clear ? "" : boxText[k];
+    inputField.value = "";
+    inputField.display = clear ? viz : 1;
+    textField.display = clear ? viz : 1;
+    log("Input and Text Display " +  boxNames[k], viz );
+  }
+  var seq = functionSequence("action",{action: "reset", value: boxName});
+  log("Box Toggle Success", !isNaN(seq));
+}
+function setFieldValues(actionObj,nameObj = {},valueObj = {}){
+  log("SetFieldValue Function Begins",true);
+  
+  var failed = 0;
+  var preValue = [];
+  var action = !!actionObj ? actionObj.action : false;
+  var actVal = !!actionObj && isNaN(actionObj.value) ? "" : parseFloat(actionObj.value) || false;
+
+  var fieldNames = {
+    icTotal: { fee1: "sscash", fee2: "skip", grand: "icGrand" },
+    imTotal: { fee1: "ssmatch", fee2: "skip", grand: "imGrand" },
+    geTotal: { fee1: "grantss.0", fee2: "grantss.1", grand: "geGrand" },
+    meTotal: { fee1: "matchss.0", fee2: "matchss.1", grand: "meGrand" },
+  }
+  
+  log("Action",action);
+
+  switch(action){
+    case "visibility":
+      for (var ic = 0; ic < 12; ic++){
+        var cashField = getFieldCache("inCash." + ic);
+        if (!cashField) {
+          failed += 1; 
+          log("Field Not Found","inCash."+ic);
+          continue;
+        }
+        cashField.display = cashField ? actVal : 0;
+        cashField.value = cashField && valArg === 1 ? "" : cashField.value;
+      }
+    case "reset":
+      for (var l in fieldNames){
+        for (g in fieldNames[l]){
+          var fieldName = fieldNames[l][g];
+          var field = getFieldCache(fieldName);
+          if (!field){
+            failed += 1;
+            log("Field Not Found",fieldName);
+            continue;
+          }
+          preValue.push(fieldName,field.value,actVal)
+          field.value = actVal;
+        }
+        var lastField = getFieldCache(l);
+        if (!lastField){
+          log("Field Not Found",l);
+          failed += 1;
+          continue;
+        }
+        preValue.push(l,lastField.value,0);
+        lastField.value = 0;
+      }
+      var failedLog = failed === 0;
+      log("Fields and Values Pre- and Post-Set",preValue.join(", "));
+      return failedLog;
+    default:
+      break;
+  }
+  
+  log("normal setFieldValues",true);
+  for (var v in valueObj){
+    var stringField = getFieldCache(nameObj[v]);
+    var stringValue = parseFloat(valueObj[v]) || 0;
+
+    if (nameObj[v] === "skip" || isNaN(stringValue)) continue;
+
+    if (!stringField){
+      log("Missing Field!",nameObj[v]);
+      failed += 1;
+      continue;
+    }
+    preValue.push(v,stringField.value);
+    stringField.value = stringValue;
+  }
+
+  log("Fee and GrandTotal field names to write", [nameObj.fee1, nameObj.fee2, nameObj.grand].join(", "));
+  log("Fee and GrandTotal written values", [valueObj.fee1, valueObj.fee2, valueObj.grand].join(", "));
+  log("Fee and GrandTotals previous values", preValue.join(", "));
+
+  var set = failed === 0;
+  return set;
+}
+function findBoxes() {
+  log("FindBoxes Function Begins","No arguments");
+
+  
+  var boxes = ["alotBox", "exBox", "pdrBox"];
+  for (var b = 0; b < boxes.length; b++) {
+    var boxName = boxes[b];
+    var fieldbx = getFieldCache(boxName);
+    if (!fieldbx) continue;
+    if (fieldbx && fieldbx.value === "Yes") return boxName;
+  }
+  return false;
+}
+function validateTotals(actionArg) {
+  log("ValidateTotals Function Begins");
+
+  var boxMsg = {
+    "pdrBox": "Per Diem Mode is Active",
+    "alotBox": "Non-monetary Mode is Active",
+    "exBox": "Exemption Mode is Active"
+  };
+
+  var budget = {
+    idle: "Budget Validator is Idle...",
+    balance: ["Success!", "", "Totals are balanced!"],
+    unbalance: ["Error!", "", "Totals are not balanced!"],
+    cg: "Cash/Grant",
+    mm: "Both Match",
+    neg: "Deobligation Mode is Active: Negative amounts are automatically balanced",
+    pdr: ["Per Diem Mode Active: ", "Items are included up to the amount of", 0, "in this contract."]
+  };
+
+  var fc = {
+    ub: color.red,
+    bal: color.green,
+    idle: color.white,
+    neg: color.pink,
+    pdr: color.yellow
+  };
+
+  var action = !!actionArg ? actionArg.action : false;
+  var actionValue = !!actionArg ? actionArg.value : false;
+  var findBox = findBoxes();
+
+  if (action === "deobligate") {
+    return { msg: budget.neg, fill: fc.neg };
+  } else if (action === "zero") {
+    return { msg: budget.idle, fill: fc.idle };
+  }
+
+  var valuePairs = {
+    cg: ["icGrand", "geGrand"],
+    mm: ["imGrand", "meGrand"]
+  };
+
+  var falseKeys = [];
+
+  function evaluatePairValues(pair) {
+    var [field1Name, field2Name] = valuePairs[pair];
+    var field1 = getFieldCache(field1Name);
+    var field2 = getFieldCache(field2Name);
+
+    var val1 = field1 ? parseFloat(field1.value) : 0;
+    var val2 = field2 ? parseFloat(field2.value) : 0;
+    var isEqual = val1 === val2;
+
+    if (!field1 || !field2 || isNaN(val1) || isNaN(val2)) {
+      return {key: null, value: [0, 0], equal: null };
+    }
+
+    if (!isEqual) falseKeys.push(pair);
+    return { key: pair, value: [val1, val2], equal: isEqual };
+  }
+
+  function unBalanceMsg(fKeys){
+    var msgArray = [];
+    for (var kp = 0; kp < fKeys.length; kp++){
+      var pairidk = fKeys[kp];
+      msgArray.push(budget[pairidk]);
+    }
+    return msgArray.join(" and ");
+  }
+
+  function getSpecial(cps) {
+    if (action === "pdrBox") {
+      return {
+        status: "pdrBox",
+        msg: budget.pdr,
+        special: actionValue
+      };
+    } else if (!cps.cg.equal || !cps.mm.equal) {
+      return {
+        status: "unequal",
+        msg: unBalanceMsg(falseKeys),
+        special: falseKeys
+      };
+    } else {
+      return {
+        status: "equal",
+        msg: budget.balance,
+        special: true
+      };
+    }
+  }
+
+  function validLoop() {
+    var loop = {};
+    for (var vp in valuePairs) {
+      loop[vp] = evaluatePairValues(vp);
+      log("Valid Loop Key " + vp, loop[vp]);
+    }
+
+    var negOrZero = { zero: [], neg: [] };
+
+    var pairArray = [loop.cg,loop.mm];
+
+    for (pa = 0; pa < pairArray.length; pa++){
+      var val = pairArray[pa].value;
+      if (val === 0) {
+        negOrZero.zero.push(val);
+      } else {
+        negOrZero.neg.push(val);
+      }
+    }
+
+    return {
+    cg: loop.cg,
+    mm: loop.mm,
+    zeros: negOrZero.zero.length ? negOrZero.zero : null,
+    neg: negOrZero.neg.length ? negOrZero.neg : null
+    }
+  }
+
+  var precheckLoop = validLoop();
+  var checkedPairs = getSpecial(precheckLoop);
+
+  function msgAssembly(loops) {
+    var msg = [];
+    var balance = loops.cg && loops.mm;
+
+    switch (checkedPairs.status) {
+      case "pdrBox":
+        var pdrMsg = budget.pdr.slice();
+        pdrMsg[2] = util.printf("$%,0.0f", checkedPairs.special);
+        pdrMsg[0] += balance ? " Per diem totals are balanced." : " Per diem totals are unbalanced!";
+        msg = pdrMsg;
+        break;
+      case "unequal":
+        msg.push(budget.unbalance, checkedPairs.msg);
+        break;
+      case "equal":
+        msg.push(budget.balance);
+        break;
+      default:
+        msg.push(budget.idle);
+    }
+
+    return msg.join(" ");
+  }
+
+  function fieldColorizer(status) {
+    switch (status) {
+      case "pdrBox": return fc.pdr;
+      case "deobligate": return fc.neg;
+      case "equal": return fc.bal;
+      case "unequal": return fc.ub;
+      default: return fc.idle;
+    }
+  }
+
+  var folorizer = fieldColorizer(checkedPairs.status);
+
+  for (var c in valuePairs) {
+    var gnames = valuePairs[c];
+    for (var g = 0; g < gnames.length; g++) {
+      var gField = getFieldCache(gnames[g]);
+      var specialBuffer = arrayIncludes(["deobligation", "pdrBox", "box"],checkedPairs.status);
+      var grandfill = specialBuffer ? folorizer : fc.idle;
+      if (gField) gField.fillColor = grandfill;
+    }
+  }
+
+  var validationMsg = msgAssembly(precheckLoop);
+  if (action === "box") {
+    validationMsg = boxMsg[actionValue] + " " + validationMsg;
+  }
+
+  var valid = { msg: validationMsg, fill: folorizer };
+  log("Validation Message", validationMsg);
+  return valid;
+}
+function valueHandler(value, name){
+  log("ValueHandler begins here",true)
+  var subTotal = isNaN(value) ? 0 : parseFloat(value);
+  var findBox = findBoxes();
+  
+  if (subTotal <= 0) return { fee1: 0, fee2: 0, grand: subTotal };
+  
+  function valueProcessor(subTotal,name){  
+    var feeRates = {income : [0.118,"skip"], expense:[0.1,0.018]}
+    var inFee = {fee1: 0, fee2: 0}
+    var nonMon = findBox === "alotBox" || findBox === "exBox";
+    var income = name === "icTotal" || name === "imTotal";
+
+    for (var fi in inFee) {
+      var feeRate = income ? feeRates.income : feeRates.expense;
+      var fee = fi === "fee1" ? feeRate[0] : feeRate[1];
+      inFee[fi] = isNaN(fee) || nonMon ? 0 : parseFloat(subTotal * fee)
+    }
+  
+    function calculateGrandTotal(sub,fee){
+      var gTotal = isNaN(sub) ? 0 : parseFloat(sub);
+      for (var f in fee){
+        if (fee[f] === "skip" || isNaN(fee[f])) continue;
+        gTotal += parseFloat(fee[f]) || 0;
+      }
+      return gTotal
+    }
+    return {fee1: inFee.fee1, fee2: inFee.fee2, grand: calculateGrandTotal(subTotal,inFee)}
+  }
+  
+  var vals = ["Total:", value,];
+  var valueObj = valueProcessor(value,name);
+
+  for (var v in valueObj){
+    if (valueObj[v] === "skip" || nameObj[v] === "skip") continue;
+    vals.push(v,":",valueObj[v]);
+  }
+  
+  log("Total field name", name);
+  log("Fee and Grand Values",vals.join(" "))
+  log("Functions",whichFunction.join(""));
+  return valueObj;
+}
+function calculateSalary(flipswitch) {
+  log("CalculateSalary Function begins. Flipswitch",flipswitch);
+
+  
+  var calculator = getFieldCache("calculator");
+  var staff = getFieldCache("staffTotal");
+  if (!calculator || !staff) return;
+  
+  var flipMsg = {
+    1 : "Calculator is OFF. No staff salaries detected.",
+    0 : "Calculator is ON. Please enter the number of salaries this contract will cover by using menu to the right.",
+  } 
+  var fill = {
+    0 : color.green,
+    1 : color.white
+  }
+  var logMsg = {
+    staff:"Staff Total Visibility:",
+    calc: "Calculator Msg:",
+    0:"Hidden",
+    1:"Visible"
+  }
+  
+  var flip = flipswitch ? 0 : 1;
+  calculator.fillColor = fill[flip]
+  calculator.value = flipMsg[flip];
+  staff.display = flip;
+  log("Calculator and Staff",[logMsg.staff,logMsg[flip],logMsg.calc,flipMsg[flip]].join(" "));
+  staffToggle.call(this);
+}
+function salaryDetail(name) {
+  
+  var calcFields = ["calcQuant", "newExist", "fullPart", "jobTitle", "timePercent", "calcSalary", "calcFringe"];
+  var salaryInputs = {};
+  var empty = 0;
+
+  function getRowNumber(resultName){
+    var staff = getFieldCache("staffTotal");
+    var staffLimit = staff ? parseFloat(staff.value) : 0;
+    if (!staff) return null;
+    for (var s = 0; s < staffLimit; s++){
+      var result = "result." + s;
+      if (resultName === result) return s;
+    }
+    return null;
+  }
+  var rowNumber = getRowNumber(name);
+  if (rowNumber === null) throw new Error("Result Field Not Found: " + name);
+
+  function resultProcessor(inputs) {
+    var result = [];
+    var line;
+    var quant = parseFloat(inputs.calcQuant);
+    var percent = !!inputs.timePercent && inputs.timePercent > 1 ? parseFloat(inputs.timePercent/100) : parseFloat(inputs.timePercent) || 1;
+    var words = {
+        0: "(Zero)",
+        1: "(One)",
+        2: "(Two)",
+        3: "(Three)",
+        4: "(Four)",
+        5: "(Five)",
+        6: "(Six)",
+        7: "(Seven)",
+        8: "(Eight)",
+        9: "(Nine)",
+        10: "(Ten)",
+        11: "(Eleven)",
+        12: "(Twelve)",
+        13: "(Thirteen)",
+        14: "(Fourteen)",
+        15: "(Fifteen)",
+        16: "(Sixteen)",
+        17: "(Seventeen)",
+        18: "(Eighteen)",
+        19: "(Nineteen)",
+        20: "(Twenty)"
+    }
+    for (var key in inputs){
+      var value = inputs[key];
+      var valCheck = !!value ? value : null;
+      switch (key) {
+        case "calcQuant":
+          line = (isNaN(quant) || words[quant] === undefined) ? null : quant + " " + words[quant];
+          result.push(line);
+          break;
+        case "newExist":
+          line = (valCheck === "new" || valCheck === "existing") ? valCheck : null;
+          result.push(line); 
+          break;
+        case "fullPart":
+          line = (valCheck === "full-time" || valCheck === "part-time") ? valCheck : null;
+          result.push(line); 
+          break;
+        case "jobTitle":
+          var plural = (!!quant && quant >= 2) ? valCheck + "s" + " each @" : valCheck + "@";
+          line = valCheck ? plural : null;
+          result.push(line); 
+          break;
+        case "timePercent":
+          line = valCheck ? valCheck + "% of" : null;
+          result.push(line); 
+          break;
+        case "calcSalary":
+          if (!isNaN(value) && value !== "") {
+            var salaryAmount = percent * parseFloat(value);
+            line = util.printf("$%,0.2f",value) + " for " + util.printf("$%,0.2f", salaryAmount) + " in salary";
+          } else {
+            line = null;
+          }
+          result.push(line); 
+          break;
+        case "calcFringe":
+          line = !!valCheck ? " and " + util.printf("$%,0.2f",valCheck) + " in fringe benefits." : ".";
+          result.push(line); 
+          break;
+        default:
+          result.push(null); 
+      }
+    }
+    if (arrayIncludes(result,null)) return null;
+    else return result.join(" ");
+  }
+
+  for (var sd = 0; sd < calcFields.length; sd++){
+    var e = calcFields[sd];
+    var fieldName = e + "." + rowNumber;
+    var field = getFieldCache(fieldName);
+    if (!field) {
+      log("Field Not Found", fieldName);
+      salaryInputs[e] = null;
+      empty += 1;
+      continue;
+    }
+    var fieldV = field && !!field.value ? field.value : null;
+    if (fieldV === null) empty += 1;
+    salaryInputs[e] = fieldV;
+  }
+
+  var resultText = empty === 0 ? resultProcessor(salaryInputs) : null;
+  var resultField = getFieldCache(name);
+  var resultDisplay = resultField && empty === 0 ? 0 : 1;
+
+  resultField.display = resultDisplay;
+  return resultText === null ? "" : resultText;
+}
+function staffToggle(){
+  
+  var calculator = getFieldCache("calculator");
+  var staffTotal = getFieldCache("staffTotal");
+  var staff = staffTotal ? parseInt(staffTotal.value) : 0;
+  var breach = staff >= 6;
+  var calMsg = "Max number of staff breached. Please upload a list of salary details in a separate thisument.";
+  
+  if (!calculator || !staffTotal) return;
+
+  if (breach && calculator){
+    calculator.value = calMsg;
+    return;
+  } 
+  //visibile = 0; hidden = 1
+  function salaryFieldVisibility(staff){;
+    var calcFields = ["jobTitle.", "calcQuant.", "newExist.", "fullPart.", "timePercent.", "calcSalary.", "calcFringe."];
+    
+    for (var q = 0; q < calcFields.length; q++){
+      var qField = getFieldCache("question." + q);
+      var qVisibility = qField && !breach || staff !== 0 ? 0 : 1;
+      if (!qField) continue;
+      qField.display = qVisibility;
+    }  
+
+    
+    for (var rows = 0; rows < 6; rows++){
+      for (var salf = 0; salf < calcFields.length; salf++){
+        var salField = getFieldCache(calcFields[salf] + rows);
+        var visibility = salField && rows <= staff && !breach ? 0 : 1;
+        var fieldValue = visibility === 1 ? "" : salField.value; 
+        if (!salField) continue; 
+        salField.display = visibility;
+        salField.value = fieldValue;
+      }
+    }
+  }
+  salaryFieldVisibility(staff);  
+}
