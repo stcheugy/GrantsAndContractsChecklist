@@ -46,10 +46,13 @@ How It Works:
 | Calculation Target | Description                                                    |
 | ------------------ | -------------------------------------------------------------- |
 | Subtotals          | Auto-calculated based on input method (line items or per diem) |
-| Income             | Applies 11.8% fee                                              |
-| Expenses           | Applies stacked 10% and 1.8% fees                              |
+| Income             | Calculates and applies a cumulative THQ and DHQ fee            |
+| Expenses           | Calculates and apllies standard 10% THQ and 2% DHQ fees        |
+| Per Diem           | Caculates contract max by multiplying rate by units by days    |
 | Non-Monetary       | Fee logic bypassed completely                                  |
-| Salary Builder     | Accepts role, FTE %, salary, and fringe; returns summary       |
+| Fee Exempt         | Fee logic is bypassed for EFSP/FEMA income                     |
+| Salary Calculator  | Dynamically detects salary or fringe benefits                  |
+| Salary Detail      | Dynamically displays salary details in standard format         |
 
 ---
 
