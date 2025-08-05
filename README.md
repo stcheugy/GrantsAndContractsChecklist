@@ -51,6 +51,7 @@ How It Works:
 | Per Diem           | Caculates contract max by multiplying rate by units by days    |
 | Non-Monetary       | Fee logic bypassed completely                                  |
 | Fee Exempt         | Fee logic is bypassed for EFSP/FEMA income                     |
+| Deobligation       | Bypass fee logic & duplicate negative value to balance amount  |
 | Salary Calculator  | Dynamically detects salary or fringe benefits                  |
 | Salary Detail      | Dynamically displays salary details in standard format         |
 
@@ -115,13 +116,13 @@ flowchart TD
     ---
     RunTotals2 -->|PDR Mode| PDRBranch[Use unit * rate logic → auto-calculate subtotal]
     PDRBranch --> ValidateTotals2[PDR Validator Checks (looser constraints)]
-
+      ---
     RunTotals2 -->|Deobligation Mode| DeobBranch[Allow negatives, show pink highlight]
     DeobBranch --> ValidateTotals3[Check grant total vs expense]
-
+      ---
     RunTotals2 -->|Non-Monetary Mode| NonMonetaryBranch[Skip fees, show white fields]
     NonMonetaryBranch --> ValidateTotals4[Confirm zeroed or non-financial fields only]
-
+      ---
     AnyValidation[Validation Step] --> Validator[Display message, color, success or error]
 
 ---
