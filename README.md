@@ -6,10 +6,12 @@
 
 ## Executive Summary
 
-This form is no longer just a static document — it is now a dynamic system powered by custom-built JavaScript automation. Thanks to this embedded codebase, the National Grants & Contracts PDF form actively manages calculations, validations, and field logic in real time. This means:
+This form is no longer just a static document — it is now a dynamic system powered by custom-built JavaScript automation. Thanks to this embedded codebase, the Grants & Contracts Checklist and Review Log actively manages calculations, validations, and field logic in real time. This means:
 
+* Service units will gain a more complete and accurate understanding of grant budgets
+* Understaffed service units gain the opportunity to plan for new types of funding (e.g. per diem, deboligations, valued gifts-in-kind, etc)
 * Manual errors are caught before submission
-* Staff no longer need to rely on external calculators or notes
+* Staff no longer need to rely on external calculators or memorizing internal fee rates
 * Programs of all sizes and funding types are supported, including Per Diem, Non-Monetary, and Deobligation modes
 
 What once required manual workarounds is now automated, accurate, and responsive. This form is ready for national standardization and scalable implementation across all territories. Its modular code structure also allows for future enhancements with minimal maintenance.
