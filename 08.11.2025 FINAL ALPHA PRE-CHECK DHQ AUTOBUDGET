@@ -1,0 +1,1294 @@
+//=====GET AND SET CACHE=====
+// CASH MONEY BABY
+function cacheHandler(action, key, value, parser) {
+  var cacheField = getFieldCache(key + "Cache");
+  if (!cacheField) return action === "get" ? null : false;
+  
+  if (action === "get") {
+    if (!parser) return cacheField.value;
+    return parser(cacheField.value);
+  } else if (action === "set") {
+    cacheField.value = value;
+    return true;
+  }
+  return null;
+}
+// LINE CACHE
+function getLineCache(line) {
+  return cacheHandler("get", line, null, floatizer);
+}
+function setLineCache(line, total) {
+  return cacheHandler("set", line, floatizer(total));
+}
+//VALIDATION CACHE
+function getValidCache() {
+  var cacheValue = cacheHandler("get", "valid", null, function(value) {
+    var cacheParts = value ? value.split("***") : ["Budget Validator is Idle...", "idle"];
+    return {
+      msg: cacheParts[0] || "Budget Validator is Idle...",
+      code: cacheParts[1] || "idle"
+    };
+  });
+  
+  if (!cacheValue) {
+    cacheValue = { msg: "Budget Validator is Idle...", code: "idle" };
+  }
+  
+  var colorFill = {
+    ub: color.red,
+    bal: color.green,
+    idle: color.white,
+    neg: color.pink,
+    pdr: color.yellow
+  };
+  
+  return { 
+    msg: cacheValue.msg, 
+    fill: colorFill[cacheValue.code] || color.white 
+  };
+}
+function cacheValidationResult(result) {
+  var colorCode = getColorCodeFromFill(result.fill);
+  var cacheValue = [result.msg, colorCode].join("***");
+  var success = cacheHandler("set", "valid", cacheValue);
+  log("Validation result cached", cacheValue);
+  return success;
+}
+function getColorCodeFromFill(fillColor) {
+  var colors = {
+    [color.red]: "ub",
+    [color.green]: "bal", 
+    [color.white]: "idle",
+    [color.pink]: "neg",
+    [color.yellow]: "pdr"
+  };
+  return colors[fillColor] || "idle";
+}
+//BOX CACHE
+function getBoxCache() {
+  var fieldValue = cacheHandler("get", "boxGuard", null, function(value) {
+    log("boxGuardField's Value was Found", [!!value, value || "Off"].join(", "));
+    return value || "Off";
+  });
+  
+  if (!fieldValue) return null;
+  
+  var validBoxes = ["alotBox", "pdrBox", "exBox"];
+  return arrayIncludes(validBoxes, fieldValue) ? fieldValue : "Off";
+}
+function setBoxCache(cacheObj) {
+  log("Cache Field Set Success", !!getFieldCache("boxGuardCache"));
+  
+  if (cacheObj.preCache && !cacheObj.isCheckYes) {
+    var displayReset = resetDisplay(cacheObj.preCache);
+    log("Cache and Display Reset Success", [cacheObj.preCache, displayReset].join(" and "));
+    return true;
+  }
+  
+  return cacheHandler("set", "boxGuard", cacheObj.boxName);
+}
+function evaluateBoxCache(name, items, cacheValue) {
+  log("Cache Field and Value Found", [!!cacheValue, cacheValue || "Field Not Found"].join(", "));
+  if (!arrayIncludes(items.names, name)) return null;
+
+  if (cacheValue !== "Off" && cacheValue !== name) {
+    var fieldCheck = getFieldChecks(cacheValue);
+    var oldBox = getFieldCache(cacheValue);
+    if (fieldCheck && oldBox) oldBox.value = "Off";
+    log("Cached " + cacheValue + " Fields Have Been Cleared", fieldCheck);
+    displayText(false, cacheValue);
+  }
+
+  var textDisplay = displayText(items.check, name);
+  log(name + " Fields Are Displayed", textDisplay);
+  var setSuccess = setBoxCache(items);
+  log(name + "Fields Have Been Successfully Set", setSuccess);
+
+  return setSuccess;
+}
+//CALCULATOR CACHE
+function getCalculatorCache() {
+  return cacheHandler("get", "calculator", null, function(value) {
+    if (!value) return null;
+    var cache = value.split("***");
+    return {
+      staff: floatizer(cache[0]) || 0,
+      flip: floatizer(cache[1]) || 0,
+      breach: cache[2] === "true"
+    };
+  });
+}
+function setCalculatorCache(obj) {
+  if (!obj) return false;
+  var cacheValue = [obj.staff, obj.flip, obj.breach].join("***");
+  log("Calculator Cache Field Found, Calculator, and Staff Value", [true, obj.flip, obj.staff, obj.breach].join(" and "));
+  return cacheHandler("set", "calculator", cacheValue);
+}
+//=====Get and Set Cache functions - CONSOLIDATED=====
+
+//=====UTILITY=====
+function makeFieldCache(context) {
+  var cache = {};
+  return function (fieldName) {
+    if (!fieldName) return null;
+    if (!(fieldName in cache)) {
+      cache[fieldName] = context.getField(fieldName);
+    }
+    return cache[fieldName];
+  }
+}
+var getFieldCache = makeFieldCache(this);
+function log(label, val) {
+  console.println(label + ": " + JSON.stringify(val) + "\n");
+}
+function arrayIncludes(arr, val) {
+  for (var a = 0; a < arr.length; a++) {
+    if (arr[a] === val) {
+      return true;
+    }
+  }
+  return false;
+}
+function generateFieldNameArrays(base, index) {
+  if (!base || isNaN(index)) return null;
+  log("Generating Field Names " + base, [0, floatizer(index)].join(" thru "));
+  var fieldNameArray = [];
+  for (var i = 0; i < floatizer(index); i++) {
+    fieldNameArray.push(base + "." + i)
+  }
+  return fieldNameArray;
+}
+function findBoxes() {
+  var boxGuardCache = boxGuard.active;
+  boxGuard.active = true;
+  log("FindBoxes Function Begins with Active Box Guard", true);
+  var activeBox;
+  var boxes = ["alotBox", "exBox", "pdrBox"];
+  for (var b = 0; b < boxes.length; b++) {
+    var boxName = boxes[b];
+    var fieldbx = getFieldCache(boxName);
+    log(boxes[b] + "Field Found and Value", [!!fieldbx, fieldbx.value].join(" "));
+    
+    if (!fieldbx) continue;
+    if (fieldbx && fieldbx.value === "Yes") {
+      activeBox = boxName;
+      break;
+    }
+  }
+  boxGuard.active = boxGuardCache;
+  return activeBox || false;
+}
+function floatizer(val) {
+  var float = parseFloat(val);
+  return isNaN(float) ? 0 : float;
+}
+function getFieldNames(arg){
+  var fieldNames = {
+    icTotal: { fee1: "sscash", fee2: "skip", grand: "icGrand" },
+    imTotal: { fee1: "ssmatch", fee2: "skip", grand: "imGrand" },
+    geTotal: { fee1: "grantss.0", fee2: "grantss.1", grand: "geGrand" },
+    meTotal: { fee1: "matchss.0", fee2: "matchss.1", grand: "meGrand" },
+  }
+  if (!arg) return fieldNames;
+  return fieldNames[arg];
+}
+function calculateSumArray(arr) {
+  var total = 0;
+  if (!arr || arr.length <= 0) return null;
+  for (var v = 0; v < arr.length; v++) {
+    var value = floatizer(arr[v]);
+    total += value;
+  }
+  log("Calcualte Sum Array Total",total);
+  return total;
+}
+function calculateSumObj(obj){
+  var total = 0;
+  if (!obj) return null;
+
+  for (var v in obj) {
+    var value = floatizer(obj[v]);
+    total += value;
+  }
+  return total;
+}
+function calculatePDRInputs(obj){
+  var total = 0;
+  if(!obj) return null;
+  total = floatizer(obj[0] * obj[1] * obj[2]) || 0;
+  log([obj[0],obj[1],obj[2]].join(" X "), total);
+  return total;
+}
+function resetFieldValues(name){
+  log("Reset FieldValue Function Action", true);
+  var fieldNames = getFieldNames(false);
+  var failed = false;
+  for (var l in fieldNames) {
+    var fieldObj = fieldNames[l];
+    for (var u in fieldObj) {
+      var field = getFieldCache(fieldObj[u]);
+      if (fieldObj[u] === "skip") continue;
+
+      log(fieldObj[u] + " Field Found", !!field);
+      failed = !field ? true : failed;
+      if (!field) continue;
+      field.value = 0;
+    }
+    if (l === name) continue;
+    var totalField = getFieldCache(l);
+    var fieldCache = getFieldCache(l + "Cache");
+    failed = !fieldCache || !totalField ? true : failed;
+
+    if (!totalField && !fieldCache) continue;
+    totalField.value = 0;
+    fieldCache.value = 0;
+  }
+  log("Field Reset Complete", failed);
+  return failed;
+}
+function setFieldValues(name,valueObj) {
+  log("SetFieldValue Function Begins", true);
+  var nameObj = getFieldNames(name);
+  var stringNames = [];
+  var valueString = [];
+  var failed = false;
+  for (var v in valueObj) {
+    var stringField = getFieldCache(nameObj[v]);
+    var stringValue = stringField ? floatizer(valueObj[v]) : 0;
+
+    failed = !stringField ? true : failed;
+    stringNames.push(v, nameObj[v]);
+    valueString.push(v, valueObj[v]);
+
+    if (!stringField || nameObj[v] === "skip" || isNaN(stringValue)) continue;
+    stringField.value = stringValue;
+  }
+  log("Fee and GrandTotal Names", stringNames.join(", "));
+  log("Fee and GrandTotal written values", valueString.join(", "));
+  return failed;
+}
+//======Utility Functions======
+
+//=====FUNCTION SEQUENCE=====
+var sequenceGuard = {active: false}
+var grandObj = { cg: {}, mm: {} }
+function functionSequence(name, currentValue) {
+  log("Function Sequence Begins With", name);
+  if (sequenceGuard.active) return currentValue;
+  sequenceGuard.active = true;
+  
+  var findBox = findBoxes();
+  var inputMode = name === "icTotal" && !!findBox;
+  var line = getLineNameArray(name);
+  var total = inputMode ? floatizer(runInputs(findBox)) : floatizer(runLines(line));  
+  var cacheValue = getLineCache(name);
+  
+  // Fixed: This line was calling setLineCache incorrectly
+  if (cacheValue !== null && cacheValue !== total) {
+    setLineCache(name, total);  // Fixed: pass name and total, not cacheValue
+  }
+  
+  log("Current, Running, and Cached Totals", [currentValue, total, cacheValue].join(", "));
+
+  var validKey = getValidKey(name);
+  var exitArg = {
+    name: name,
+    value: total,
+    cache: cacheValue,
+    current: currentValue,
+    key: validKey,
+  }
+  
+  var exitCheck = earlyExit(exitArg);
+  var noChange = total === cacheValue && total === currentValue && cacheValue === currentValue;
+  
+  if (exitCheck || noChange) {
+    log("Early Exit-No Change in Value", noChange);
+    sequenceGuard.active = false;
+    return total;
+  }
+
+  var valueItems = {
+    line: name,
+    type: getLineType(name),
+    nonMon: !!findBox && findBox !== "pdrBox",
+  }
+ 
+  var valueObj = valueHandler(total, valueItems);
+  setFieldValues(name, valueObj);  // Fixed: removed .call(this, ...)
+  setValidation("passive", validKey);  // Fixed: call setValidation with proper args
+  sequenceGuard.active = false;
+  return total || 0;
+}
+function deobligationMode(dTotal, name) {
+  log("DeobligationMode Active", dTotal < 0);
+  if (dTotal >= 0) return false;
+
+  var siblings = {
+    icTotal: "geTotal",
+    imTotal: "meTotal", 
+    geTotal: "icTotal",
+    meTotal: "imTotal"
+  }
+  var grandSiblings = {
+    icTotal: "geGrand",
+    imTotal: "meGrand",
+    geTotal: "icGrand", 
+    meTotal: "imGrand"
+  }
+  
+  var sibling = {
+    s: siblings[name],
+    g: grandSiblings[name]  // Fixed: was grandSiblings[sibling]
+  }
+
+  for (var gs in sibling){
+    var field = getFieldCache(sibling[gs]);  // Fixed: was subling[gs]
+    if (!field || !sibling[gs]) continue;
+    field.value = floatizer(dTotal);
+  }
+  return true;
+}
+function runInputs(boxArg) {
+  log("runInputs SubFunction Begins-BoxArg and InputName", [boxArg, "inputMode"].join(" and "));
+
+  var guardCache = boxGuard.active;
+  boxGuard.active = true;
+  var boxItems = getBoxItems(boxArg);
+  var items = {};
+  var calculatePDR = boxArg === "pdrBox";
+
+  for (var b = 0; b < boxItems.count; b++){
+    var field = getFieldCache(boxItems.input[b]);
+    if (!field) continue;
+    items[b] = floatizer(field.value); 
+  }
+  boxGuard.active = guardCache;
+
+  // Fixed: Logic was backwards - PDR should use calculatePDRInputs, others use calculateSumObj
+  var inputTotal = calculatePDR ? calculatePDRInputs(items) : calculateSumObj(items);
+  log("Input Total", inputTotal);
+
+  return inputTotal;
+}
+function runLines(line) {
+  log("runLines SubFunction Begins", true);
+  var subTotal = floatizer(calculateSumArray(line));
+  return subTotal;
+}
+function earlyExit(exitArg) {
+  log("Exit Early Function begins", !!exitArg);
+  if (!exitArg) return null;
+  
+  var deobligate = deobligationMode(exitArg.value, exitArg.name);
+  var zeroStatus = getZeroStatus(exitArg.name);
+  
+  var checks = deobligate ? "deobligate" : (zeroStatus ? "zero" : null);  
+  if (checks === null) return null;
+  
+  var validArg = validationArg(checks);
+  var quickValueObj = getQuickValues(floatizer(exitArg.value));
+  var setSuccess = setFieldValues(exitArg.name, quickValueObj);
+  var validObj = validateTotals(validArg, exitArg.key);  
+  setFieldValidation(validObj);
+  log("Early Exit Success for " + checks, setSuccess);
+  return setSuccess;
+}
+function lineSwitch(arg){
+  switch(arg){
+    case "icTotal":
+      return "icTotal";
+    case "imTotal":
+      return "imTotal";
+    case "geTotal":
+      return "geTotal";
+    case "meTotal":
+      return "meTotal";
+    default:
+      return null;
+  }
+}
+function getTotalNames(){
+  return ["icTotal","imTotal","geTotal","meTotal"];
+}
+function getLineType(arg){
+  if (!arrayIncludes(getTotalNames(),arg)) return null;
+  var valueType = getFieldNames(arg).fee2 === "skip" ? "income" : "expense";
+  return valueType;
+}
+function getLineName(arg){
+   var lineNames = {
+    icTotal: ["inCash"],
+    imTotal: ["inMatch"],
+    geTotal: ["grantEx"],
+    meTotal: ["matchEx"],
+  }
+  return lineNames[arg] || null;
+}
+function getLineCount(arg){
+   var lineCounts = {
+    icTotal: [12],
+    imTotal: [12],
+    geTotal: [20],
+    meTotal: [20],
+  }
+  return lineCounts[arg] || null;
+}
+function generateLineItems(arg){
+  return{line: getLineName(arg),count:getLineCount(arg)}
+}
+function getLineNameArray(arg){
+  var lineItems = generateLineItems(arg)
+  var line = generateFieldNameArrays(lineItems.line, lineItems.count);
+  if (!line || line === null) return null;
+  return line;
+}
+function getZeroStatus(name){
+  var fieldNames = getFieldNames(false);
+  var findBox = findBoxes();
+  var zero = true;
+
+  // Fixed: This function was referencing undefined valueObj
+  for (var l in fieldNames) {
+    var liveObj = fieldNames[l];
+    for (var g in liveObj) {
+      var grandName = !liveObj[g] ? "skip" : liveObj[g];
+      var grandField = getFieldCache(grandName);
+      var grandV = grandField ? floatizer(grandField.value) : 0;  // Fixed: default to 0 instead of error message
+      
+      if (!grandField || grandName === "skip") continue;
+
+      var validKey = (l === "icTotal" || l === "geTotal") ? "cg" : "mm";
+      grandObj[validKey][grandName] = grandV;
+      
+      // If any field has a non-zero value, it's not zero status
+      if (grandV !== 0) zero = false;
+    }
+  }
+  zero = !!findBox ? false : zero;
+  return zero;
+}
+function getValidKey(arg){
+  var keys = {
+    icTotal: "cg",
+    geTotal: "cg",
+    meTotal: "mm",
+    imTotal: "mm",
+    icGrand: "cg",
+    geGrand: "cg",
+    meGrand: "mm",
+    imGrand: "mm"
+  }
+  return keys[arg] || null;
+}
+function getPDRAmount(activeBox){
+  var guardCache = boxGuard.active;
+  boxGuard.active = true;
+  if (activeBox !== "pdrBox") {
+    boxGuard.active = guardCache;
+    return null;
+  }
+  var pdrCache = getFieldCache("icTotalCache");
+  var pdrAmount = pdrCache ? floatizer(pdrCache.value) : null;
+  boxGuard.active = guardCache;
+  return pdrAmount;
+}
+//======Function Sequence Functions=====
+
+//=====Box Toggle=====
+var boxGuard = { active: false };
+function boxToggle(boxName, check) {
+  log("BoxToggle Function Begins", [boxName, check].join(" "));
+  log("boxGuard Activate", boxGuard.active);
+
+  if (boxGuard.active) return;
+
+  boxGuard.active = true;
+  var isCheckYes = check === "Yes";
+  var boxItems = getBoxItems(boxName);
+  var boxCache = getBoxCache();
+  log("Box Items Found", boxItems === null ? false : [boxItems.count, boxItems.fieldText, boxItems.input, boxItems.text].join(", "));
+
+  var boxEvaluation = evaluateBoxCache(boxName, boxItems, boxCache)
+  log("Exit Early-Cache Evaluation", boxEvaluation === null);
+
+  if (boxItems === null || boxCache === null || boxEvaluation === null) {
+    boxGuard.active = false;
+    return;
+  }
+  boxItems.check = isCheckYes;
+
+  var validCheck = isCheckYes ? { action: "box", value: boxName } : { action: "reset", value: true };
+  boxGuard.active = false;
+  log("BoxGuard is Deactivated", !boxGuard.active);
+}
+//SET OR RESET HIDDEN CACHE FIELD
+function resetDisplay(box) {
+  var fail = false;
+  var fieldBase = ["input", "text"];
+  for (var b = 0; b < fieldBase.length; b++) {
+    var nameArray = generateFieldNameArrays(fieldBase[b], getBoxItems(box).count);
+    for (var n = 0; n < nameArray.length; n++) {
+      var field = getFieldCache(nameArray[n]);
+
+      log(nameArray[n] + "Field Found", !!field);
+      if (!field) {
+        fail = true;
+        continue;
+      }
+      field.value = "";
+      field.display = 1;
+    }
+  }
+  return fail;
+}
+//GET BOX CONSTANTS AND CACHING
+function getBoxItems(arg) {
+  var boxNames = ["alotBox", "exBox", "pdrBox"];
+  if (!arrayIncludes(boxNames, arg)) return null;
+
+  var inputBase = ["input", "text"];
+
+  var boxFields = {
+    alotBox: ["Enter non monetary value"],
+    exBox: ["Enter FEMA/EFSP income ONLY"],
+    pdrBox: [
+      "Enter cost per unit",
+      "Enter unit quantity",
+      "Enter number of days"
+    ]
+  }
+  var boxCount = {
+    "alotBox": 1,
+    "exBox": 1,
+    "pdrBox": 3
+  }
+  var boxItems = {
+    names: boxNames,
+    fieldText: boxFields[arg],
+    count: floatizer(boxCount[arg]),
+    input: [],
+    text: [],
+  }
+
+  for (var f = 0; f < inputBase.length; f++) {
+    var inputName = inputBase[f];
+    boxItems[inputName] = generateFieldNameArrays(arg, boxCount[arg]);
+  }
+  return boxItems;
+}
+function getFieldChecks(arg) {
+  var fields = ["alotBox", "pdrBox", "exBox"];
+  for (var f = 0; f < fields.length; f++) {
+    var fieldMatch = fields[f] === arg;
+    var field = getFieldCache(fields[f]);
+    if (field && field.value === "Yes" && fieldMatch) return true;
+  }
+  return false;
+}
+//DISPLAY AND FIELD CONFIGURATIONS AND RESET
+function displayText(makeVisible, box) {
+  var viz = makeVisible ? 0 : 1;
+  var boxItems = getBoxItems(box);
+  log("DisplayText Begins-Field Visibility", viz === 0 ? "Visible" : "Hidden");
+
+  if (boxItems === null) {
+    log("Box Items Are null. Box", box);
+    return null;
+  }
+
+  var text = makeVisible ? boxItems.fieldText : ["", "", ""];
+  log("Field Text", text.join(", "));
+  var failed = 0;
+
+  for (var n = 0; n < boxItems.count; n++) {
+    var inputField = getFieldCache(boxItems.input[n]);
+    var textField = getFieldCache(boxItems.text[n]);
+    failed += !inputField && !textField ? 1 : 0;
+
+    log([boxItems.input[n], "and", boxItems.text[n], "Fields Found"].join(" "), !!inputField && !!textField);
+    if (!inputField && !textField) continue;
+    inputField.display = viz;
+    textField.display = viz;
+    textField.value = makeVisible ? text[n] : "";
+  }
+  return true;
+}
+function omniFieldReset(check) {
+  log("Omni-Field Reset Begin", true);
+  sequenceGuard.active = true;
+  var lines = ["inCash", "inMatch", "grantEx", "matchEx"];
+  var totals = ["icTotal", "imTotal", "geTotal", "meTotal"];
+  var fail = false;
+
+  for (var l = 0; l < lines.length; l++) {
+    var lindex = l <= 1 ? 12 : 20;
+    var cashFieldArray = generateFieldNameArrays(lines[l], lindex);
+
+    var cashDisplay = check === "Yes" ? 1 : 0;
+    var totalField = getFieldCache(totals[l]);
+    var totalCache = getFieldCache(totals[l] + "Cache");
+    for (var o = 0; o < cashFieldArray.length; o++) {
+      var cashField = getFieldCache(cashFieldArray[o]);
+      fail = !cashField ? true : fail;
+      log(cashFieldArray[o] + "Field Found", !!cashField);
+      if (!cashField) continue;
+
+      var cDisplay = l === 0 && cashField.display === cashDisplay;
+      if (cDisplay) continue;
+
+      if (l === 0) cashField.display = cashDisplay;
+      cashField.value = "";
+    }
+
+    if (totalField && totalCache) {
+      totalField.value = 0;
+      totalCache.value = 0;
+    }
+  }
+  sequenceGuard.active = false;
+}
+//=====Box Toggle Functions=====
+
+//=====VALIDATE TOTALS=====
+var validGuard = { active: false };
+function validateTotals(actionArg, validKey) {
+  log("ValidateTotals Function Begins", ["Action Argument-" + !!actionArg, "Valid Key-" + validKey].join(" and "));
+
+  // Early exit if validation guard is active 
+  log("Early Exit-ValidGuard", validGuard.active + !validGuard.active ? " ValidGuard is now Active" : "");
+  if (validGuard.active) {
+    return getValidCache();
+  }
+  validGuard.active = true;
+
+  // Handle quick action-based validations
+  var quickResult = handleQuickValidation(actionArg);
+  if (!!actionArg && quickResult !== null) {
+    validGuard.active = false;
+    return quickResult;
+  }
+  
+  // Process full validation logic
+  var validationResult = processFullValidation(validKey);
+  log("Validation Message", validationResult.msg);
+  cacheValidationResult(validationResult);
+  validGuard.active = false;
+  log("Validation Complete", true);
+  return validationResult;
+}
+//SET VALIDATION MSG AND COLOR 
+function setFieldValidation(valid){
+  var validator = getFieldCache("validator");
+  log("Set Validator Message and Fill Color Begins",!!validator);
+  if (!validator) return;
+  validator.value = valid.msg || "Budget Validator is Idle...";
+  validator.fillColor = valid.fill || color.white;
+}
+//QUICK VALIDATION AND FIELD COLOR HANDLER
+function handleQuickValidation(actionArg) {
+  log("Handle Quick Validation Function Starts with Action", [!!actionArg, actionArg.action || "No Action"].join(" "))
+  if (!actionArg || !actionArg.action) return null;
+
+  var action = actionArg.action;
+  var actionValue = actionArg.value;
+  log("Early Exit-Quick Validation Action", [!!action, action].join(" "));
+
+  // Determine colors and message based on action
+  var colors = getValidationColors();
+  var messages = getBudgetMessages();
+  var boxMessages = getBoxMessages();
+  var result = {};
+
+  switch (action) {
+    case "deobligate":
+      sequenceGuard.active = false;
+      result = {
+        msg: messages.neg.join(" "),
+        fill: colors.neg,
+        fieldColor: colors.neg
+      };
+      break;
+    case "box":
+      validGuard.active = false;
+      boxGuard.active = false;
+      result = {
+        msg: boxMessages[actionValue] || "Box mode active",
+        fill: colors.pdr,
+        fieldColor: colors.idle
+      };
+      break;
+    case "reset":
+      validGuard.active = false;
+      sequenceGuard.active = false;
+      boxGuard.active = false;
+      result = {
+        msg: messages.idle,
+        fill: colors.idle,
+        fieldColor: colors.idle
+      };
+      break;
+    default:
+      return null;
+  }
+
+  // Apply field colors for the action
+  applyFieldColors(result.fieldColor);
+  return { msg: result.msg, fill: result.fill };
+}
+//FULL VALIDATION PROCESSING
+function processFullValidation(validKey) {
+  log("Processing full validation for key", validKey);
+  
+  // Validate all field pairs and get their status
+  var pairResults = validateAllFieldPairs();
+
+  // Determine the specific validation key to check
+  var targetKey = validKey || "cg"; // Default to cash/grant if not specified
+  var targetResult = pairResults[targetKey];
+  if (!targetResult) {
+    log("Invalid validation key", targetKey);
+    return getValidCache(); // Fallback to cached result
+  }
+
+  // Analyze the results and determine status
+  var validationStatus = analyzeValidationResults(targetResult, pairResults);
+  
+  // Apply visual feedback and generate final result
+  applyFieldColors(getColorForStatus(validationStatus.status));
+  var finalResult = {
+    msg: validationStatus.message,
+    fill: getValidationColors()[validationStatus.colorCode]
+  };
+  
+  return finalResult;
+}
+function validateAllFieldPairs() {
+  var valuePairs = getValidationPairs();
+  var results = {};
+  for (var pairKey in valuePairs) results[pairKey] = validateFieldPair(pairKey, valuePairs[pairKey]);
+  return results;
+}
+function validateFieldPair(pairKey, fieldNames) {
+  log("Validating field pair", pairKey);
+  if (!sequenceGuard.active) sequenceGuard.active = true;
+  
+  var field1 = getFieldCache(fieldNames[0]);
+  var field2 = getFieldCache(fieldNames[1]);
+  
+  // Validate fields exist
+  if (!field1 || !field2) {
+    log("Validation pair fields not found", fieldNames.join(", "));
+    return {
+      pairKey: pairKey,
+      values: [null, null],
+      isEqual: false,
+      isZero: false,
+      isValid: false
+    };
+  }
+
+  // Get and validate values
+  var val1 = floatizer(field1.value);
+  var val2 = floatizer(field2.value);
+  if (isNaN(val1) || isNaN(val2)) {
+    log("Invalid numeric values in pair", pairKey);
+    return {
+      pairKey: pairKey,
+      values: [val1, val2],
+      isEqual: false,
+      isZero: false,
+      isValid: false
+    };
+  }
+
+  // Calculate comparison results
+  var isEqual = val1 === val2;
+  var isZero = val1 === 0 && val2 === 0;
+
+  log("Validation pair results", [
+    "key:" + pairKey,
+    "values:[" + val1 + "," + val2 + "]",
+    "equal:" + isEqual,
+    "zero:" + isZero
+  ].join(", "));
+
+  return {
+    pairKey: pairKey,
+    values: [val1, val2],
+    isEqual: isEqual,
+    isZero: isZero,
+    isValid: true
+  };
+}
+function analyzeValidationResults(targetResult, allResults) {
+  if (!targetResult || !targetResult.isValid) {
+    return {
+      status: "error",
+      message: "Validation failed - invalid field data",
+      colorCode: "ub"
+    };
+  }
+
+  if (targetResult.isZero && targetResult.isEqual) {
+    return {
+      status: "zero",
+      message: getBudgetMessages().idle,
+      colorCode: "idle"
+    };
+  }
+
+  if (targetResult.isEqual && !targetResult.isZero) {
+    return {
+      status: "balanced",
+      message: getBudgetMessages().balance,
+      colorCode: "bal"
+    };
+  }
+
+  var unbalancedPairs = [];
+  for (var key in allResults) {
+    if (!allResults[key].isEqual) unbalancedPairs.push(getBudgetMessages()[key]);
+  }
+  return {
+    status: "unbalanced",
+    message: getBudgetMessages().unbalance[0] + " " +
+      unbalancedPairs.join(" and ") + " " +
+      getBudgetMessages().unbalance[2],
+    colorCode: "ub"
+  };
+}
+//FIELD COLOR APPLICATION
+function applyFieldColors(targetColor) {
+  var valuePairs = getValidationPairs();
+  for (var pairKey in valuePairs) {
+    var fieldNames = valuePairs[pairKey];
+    var field1 = getFieldCache(fieldNames[0]);
+    var field2 = getFieldCache(fieldNames[1]);
+
+    if (field1) field1.fillColor = targetColor;
+    if (field2) field2.fillColor = targetColor;
+  }
+}
+function getColorForStatus(status) {
+  var colors = getValidationColors();
+  switch(status) {
+    case "zero": return colors.idle;
+    case "balanced": return colors.bal;
+    case "error": 
+    case "unbalanced": return colors.ub;
+    default: return colors.idle;
+  }
+}
+// CONFIGURATION FUNCTIONS
+function getValidationPairs() {
+  return {
+    cg: ["icGrand", "geGrand"],  // Cash/Grant pair
+    mm: ["imGrand", "meGrand"]   // Match/Match pair
+  };
+}
+function getValidationColors() {
+  return {
+    ub: color.red,      // Unbalanced
+    bal: color.green,   // Balanced
+    idle: color.white,  // Idle/Zero
+    neg: color.pink,    // Negative/Deobligation
+    pdr: color.yellow   // Per Diem/Box mode
+  };
+}
+function getBudgetMessages() {
+  return {
+    idle: "Budget Validator is Idle...",
+    balance: "Success! Budget Totals are balanced!",
+    unbalance: ["Error!", "", "Totals are not balanced!"],
+    cg: "Cash/Grant",
+    mm: "Both Match",
+    neg: ["Deobligation Mode is Active: Negative", "", "Amounts are Automatically Balanced"],
+    pdr: ["Items are included up to the amount of", 0, "in this contract."]
+  };
+}
+function getBoxMessages() {
+  return {
+    "pdrBox": "Per Diem Mode is Active",
+    "alotBox": "Non-monetary Mode is Active",
+    "exBox": "Exemption Mode is Active"
+  }
+}
+//MESSAGE ASSEMBLY
+function assembleMessage(type, value, isBalanced) {
+  var messages = getBudgetMessages();
+  var boxMessages = getBoxMessages();
+  switch (type) {
+    case "deobligate":
+      return messages.neg.join(" ");
+    case "box":
+      return boxMessages[value] || "Box mode active";
+    case "pdrBox":
+      var formattedValue = util.printf("$%,0.0f", floatizer(value));
+      var balanceStatus = isBalanced ? "Per diem totals are balanced." : "Per diem totals are unbalanced!";
+      return [
+        boxMessages.pdrBox,
+        balanceStatus,
+        "Items are included up to the amount of",
+        formattedValue,
+        "in this contract."
+      ].join(" ");
+    case "reset":
+      return messages.idle;
+    default:
+      return "Validation completed";
+  }
+}
+// CACHING FUNCTIONS
+function cacheValidationResult(result) {
+  var validCache = getFieldCache("validCache");
+  if (!validCache) return;
+
+  var colorCode = getColorCodeFromFill(result.fill);
+  var cacheValue = [result.msg, colorCode].join("***");
+
+  validCache.value = cacheValue;
+  log("Validation result cached", cacheValue);
+}
+function getColorCodeFromFill(fillColor) {
+  var colors = getValidationColors();
+  for (var code in colors) {
+    if (colors[code] === fillColor) return code;
+  }
+  return "idle"; // Default fallback
+}
+//PARSING VALIDATION CACHE
+function getValidCache() {
+  var cacheField = getFieldCache("validCache");
+  if (cacheField) {
+    var cacheValue = cacheField.value;
+    var cacheParts = cacheValue.split("***") || false;
+    var vMsg = !!cacheParts ? cacheParts[0] : "Budget Validator is Idle...";
+    var vFill = !!cacheParts ? cacheParts[1] : "idle";
+  }
+  var colorFill = {
+    ub: color.red,
+    bal: color.green,
+    idle: color.white,
+    neg: color.pink,
+    pdr: color.yellow
+  }
+  return { msg: vMsg, fill: colorFill[vFill] }
+}
+// VALIDATION ARGUMENT HANDLER
+function validationArg(arg) {
+  var configs = {
+    zero: { action: "zero", value: 0 },
+    deobligate: { action: "deobligate", value: 0 },
+    box: { action: "box", value: findBoxes() || "none" },
+    pdrBox: { action: "pdrBox", value: floatizer(getPDRAmount()) }
+  };
+  return configs[arg] || { action: "passive", value: 0 };
+}
+function setValidation(arg, validKey){
+  var validArg = validationArg(arg);
+  var validator = getFieldCache("validator");
+  if (validator) {
+    var validCache = validGuard.active;
+    validGuard.active = false;
+    var valid = validateTotals(validArg, validKey);
+    log("Validation Message", valid.msg);
+    validator.fillColor = valid.fill;
+    validator.value = valid.msg;
+    validGuard.active = validCache;
+  }
+}
+//=====Validate Totals Functions=====
+
+//=====VALUE HANDLER=== 
+function getQuickValues(arg){
+  var quickTotal = arg.action === "deobligate" ? floatizer(arg.value) : 0;
+  return {fee1: 0, fee2: 0, grand: quickTotal}
+}
+function calculateIncomeFees(value){
+  log("Calculate Income Fee Rate, 0.118",!!value);
+  if (!value) return null;
+  var feeRate = {ten: floatizer(value * 0.118), two: "skip"}
+  return feeRate;
+}
+function calculateExpenseFees(value){
+  log("Calculate Expense Fee Rates, 0.1 and 0.018",!!value);
+  if (!value) return null;
+  var feeRate = {ten: floatizer(value * 0.1),two: floatizer(value * 0.018)}
+  return feeRate;
+}
+function calculateGrandTotal(sub, fees) {
+  var gTotal = floatizer(sub + fees.fee1 + fees.fee2);
+  return gTotal;
+}
+function valueHandler(value, items) {
+  log("ValueHandler begins here", true);
+  var subTotal = floatizer(value);
+
+  var type = items.type;
+  var nonMon = items.nonMon;
+  var fees = type === "income" ? calculateIncomeFees(subTotal) : calculateExpenseFees(subTotal);
+  var exit = type === "income" ? "skip" : 0;
+  var grandTotal = calculateGrandTotal(subTotal,fees)
+  log("ValueHandler-SubTotal,Ten,Two,Grand",[subTotal,fees.ten,fees.two,grandTotal])
+  
+  if (subTotal <= 0 || nonMon || fees === null) return { fee1: 0, fee2: exit, grand: grandTotal}
+  return {fee1: fees.ten, fee2: fees.two, grand:grandTotal}
+}
+//====Value Handler Functions=====
+
+//======CALCULATE SALARY======
+var resultGuard = {active:false}
+function calculateSalary() {
+  var flipswitch = evaluateFieldValues() ? 0 : 1;
+  log("CalculateSalary Function begins", flipswitch === 0);
+  
+  var calcItems = getCalcItems(flipswitch);
+  var calculator = getFieldCache("calculator");
+  var staff = getFieldCache("staffTotal");
+  if ((!calculator && !staff) || flipswitch === 1) return salaryReset(flipswitch,false);
+
+  calculator.fillColor = calcItems.fill;
+  staff.display = flipswitch;
+  
+  var cache = {flip:flipswitch, staff:floatizer(staff.value), breach: staff.value >=5}
+  var cacheSet = setCalculatorCache(cache); 
+  log("Flipswitch, Staff, and Breach Cache", [cacheSet,cache.flip,cache.staff,breach].join(" ")); 
+  return calcItems.msg;
+}
+//STAFF TOGGLE AND RESULT FIELDS ARMS
+function getSalaryDetails(resultName){
+  log("Get Salary Detials Function Begins",!resultGuard.active);
+  var resultField = getFieldCache(resultName);
+  var resultExit = getCalculatorCache().flip === 1 || getStaffTotal() >= 5 || resultGuard.active;
+
+  var viz = resultExit ? 1 : 0;
+  resultField.display = resultField ? viz : 1;
+  
+  log("Early Exit-Result Field" + resultName,resultExit);
+  if (!resultField || resultExit) return "";
+
+  resultGuard.active = true;
+  var row = getRowNumber(resultName);
+  var parts = getResultParts(row);
+  var resultString = resultProcessor(parts);
+
+  log("Salary Detail String for " + resultName, resultString);
+  resultField.display = resultString === null ? 1 : 0;
+  return resultString;
+}
+function staffToggle(staffArg){
+  log("Staff Toggle Function Begins",!!staffArg);
+  if (!staffArg) return;
+  var staff = floatizer(staffArg);
+  
+
+  var cache = getCalculatorCache(); 
+  var staffNum = staff === 0 ? floatizer(cache.staff) : staff;
+  if(cache === null || cache.flip === 1){
+    var resetSalary = salaryReset(cache.flip,breach);
+    salaryFieldVisibility(false);
+    log("Staff Toggle Early Exit-" + breach ? "Staff Number Breached Max" : "Calculator is OFF",resetSalary);
+    return;
+  }
+  salaryFieldVisibility(staffNum);
+}
+//CALCULATOR ITEMS AND CACHE
+function getCalcItems(flip,breach){
+  if (breach) flip = 2;
+  var flipMsg = {
+    2: "Max number of staff breached. Please upload a list of in a separate document.",
+    1: "Calculator is OFF. No staff salaries detected.",
+    0: "Calculator is ON. Please enter the number of salaries this contract will cover by using menu to the right.",
+
+  }
+  var fill = {
+    0: color.green,
+    1: color.white,
+    2: color.yellow
+  }
+  return {msg: flipMsg[flip], fill: fill[flip]}
+}
+//SALARY FIELDS
+function getStaffTotal(){
+  var staffTotalField = getFieldCache("staffTotal");
+  log("Staff Total Field Found",!!staffTotalField);
+  return floatizer(staffTotalField.value) || 0;
+}
+function getSalaryFieldValues(){
+  var values = {}
+  var base = ["grantEx","matchEx"];
+  for (var f = 0; f < base.length; f++){
+    var line = base[f];
+    var fieldNames = generateFieldNameArrays(line,1);
+    for (var n = 0; n < fieldNames.length; n++){
+      var field = getFieldCache(fieldNames[f]);
+      var key = f === 0 ? n : n + 2;
+      if (!field) continue;
+      values[key] = floatizer(field.value);
+    }
+  }
+  return values;
+}
+function evaluateFieldValues(){
+  var values = getSalaryFieldValues();
+
+  for (var v in values){
+    if (floatizer(values[v]) > 0) return true;
+  }
+  return false;
+}
+function getRowNumber(name) {
+  log("Get Row Number for",!salaryGuard.active);
+  if (salaryGuard.active) return;
+  salaryGuard.active = true;
+  var cache = getCalculatorCache();
+
+  if (cache.breach || cache === null) {
+    var resultField = getFieldCache(name);
+    var viz = resultField ? 1 : 0;
+    resultField.display = viz;
+    return;
+  }
+
+  for (var s = 0; s < cache.staff; s++) {
+    var result = "result." + s;
+    if (name === result) return s;
+  }
+  return null;
+}
+//RESULT GENERATOR, GETTER, AND PROCESSOR
+function numberNotation (quant){
+  if (!quant) return null;
+  var words = {0: "(Zero)", 1: "(One)", 2: "(Two)", 3: "(Three)", 4: "(Four)", 5: "(Five)", 6: "(Six)", 7: "(Seven)", 8: "(Eight)", 9: "(Nine)",
+    10: "(Ten)", 11: "(Eleven)", 12: "(Twelve)", 13: "(Thirteen)", 14: "(Fourteen)", 15: "(Fifteen)", 16: "(Sixteen)", 17: "(Seventeen)", 18: "(Eighteen)", 19: "(Nineteen)",
+    20: "(Twenty)",
+  }
+  var notation = words[quant];
+  if (quant > 20 && quant < 30){
+    var over = quant - 20;
+    notation = [notation.substring(0,notation.length -1),words[over].substring(1)].join(" ");
+  }
+  return notation;
+}
+function resultProcessor(inputs) {
+  var line;
+  var quant = floatizer(inputs.calcQuant);
+  log("Result Processor Begings",quant > 0);
+
+  if (quant <= 0) return [null];
+  var result = [];
+
+  var percent = floatizer(inputs.timePercent) > 1 ? floatizer(inputs.timePercent / 100) : floatizer(inputs.timePercent) || 1;
+  var spelledNotation = numberNotation(quant);
+
+  for (var u in inputs) {
+    var value = inputs[u];
+    var resultItems = {
+      key : u,
+      percentage: percent,
+      quantity: quant,
+      notation: spelledNotation,
+    }
+    var part = resultPartProcessor(resultItems,value);
+    result.push(part);
+  }
+  if (arrayIncludes(result, null)) return null;
+  else return result;
+}
+function resultPartProcessor(items,value){
+  var key = items.key;
+  var quant = items.quantity;
+  var notation = items.notation;
+  switch (key) {
+    case "calcQuant":
+      return value = quant === 0 || notation === null ? null : [quant,notation].join(" ");
+    case "newExist":
+      return value !== "Select" ? value : null;
+    case "fullPart":
+      return value !== "Select" ? value : null;
+    case "jobTitle":
+      var plural = (quant >= 2) ? value + "s each @" : value + "@";
+      return plural
+    case "timePercent":
+      return value + "% of"
+    case "calcSalary":
+      var salaryAmount = value === 0 ? null : floatizer(percent * value);
+      value = salaryAmount === null ? null : [util.printf("$%,0.2f", value),"=",util.printf("$%,0.2f", salaryAmount),"in salary"].join(" ");
+      return value;
+    case "calcFringe":
+      return value === 0 ? "." : ["and",util.printf("$%,0.2f", value),"in fringe benefits."].join(" ");
+    default:
+      return null;
+  }
+}
+function getCalcNames(){
+  var calcFields = ["calcQuant", "newExist", "fullPart", "jobTitle", "timePercent", "calcSalary", "calcFringe"];
+  return calcFields;
+}
+function generateSalaryArray(rowNumber){
+  var calcFields = getCalcNames();
+  var salaryNames = [];
+
+  for (var c = 0; c < calcFields; c++){
+    var name = calcFields[c] + "." + rowNumber
+    salaryNames.push(name);
+  }
+  return salaryNames;
+}
+function getResultParts(rowNumber) {
+  var nameArray = generateSalaryArray(rowNumber);
+  var calcFields = getCalcNames();
+  var salaryInputs = {};
+
+  for (var c = 0; c < nameArray.length; c++) {
+    var field = getFieldCache(nameArray[c]);
+    var key = calcFields[c];
+    if (!field) {
+      salaryInputs[key] = null;
+      continue;
+    }
+    var input = arrayIncludes(["calcQuant", "timePercent","calcSalary", "calcFringe"],key) ? 
+      floatizer(field.value) : field.value;
+    salaryInputs[key] = input;
+  }
+  return salaryInputs
+}
+//SALARY VISIBILITY
+function salaryReset(reset,breach){
+  var arg = breach ? 2 : (reset ? 1 : 0);
+  if(arg === 0) return false;
+  var calculator = getFieldCache("calculator");
+  
+  if (!calculator || !reset) return false;
+  var items = getCalcItems(arg);
+  calculator.fillColor = items.fill;
+  calculator.value = items.msg;
+  return true;
+}
+function salaryFieldVisibility(staff, breach){
+  var viz = 0;
+  if (!staff || breach) viz = 1;
+
+  var calcFields = ["jobTitle", "calcQuant", "newExist", "fullPart", "timePercent", "calcSalary", "calcFringe"];
+  var questions = generateFieldNameArrays("question",calcFields.length); 
+  for (var q = 0; q < questions.length; q++){
+    displayDetailFields(calcFields[q],staff,viz);
+    var qField = getFieldCache(questions[q]);
+    if (!qField) continue;
+    qField.display = viz;
+  }
+}
+function displayDetailFields(base,rows,viz){
+  log("Display Detail Fields Function Begins for " + base, base && rows && viz);
+  if (!base && !rows && !viz) return null;
+  var detailArray = generateFieldNameArrays(base,rows);
+
+  for (var d = 0; d < arr.length; d++){
+    var field = getFieldCache(detailArray[d]);
+    if (!field) continue;
+    field.display = viz;
+    field.value = viz === 1 ? "" : field.value;
+  }
+}
+//======Calculate Salary Functions======
