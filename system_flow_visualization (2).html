@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Flow Visualization</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2em;
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .flowchart {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            margin: 40px 0;
+        }
+        
+        .flow-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .node {
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 2px solid;
+            font-weight: 600;
+            text-align: center;
+            min-width: 140px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .node:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .start { background: #e1f5fe; border-color: #01579b; color: #01579b; }
+        .decision { 
+            background: #fff3e0; 
+            border-color: #e65100; 
+            color: #e65100;
+            border-radius: 50px;
+            position: relative;
+        }
+        .decision::before {
+            content: "?";
+            position: absolute;
+            right: -5px;
+            top: -5px;
+            background: #ff9800;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .process { background: #f3e5f5; border-color: #4a148c; color: #4a148c; }
+        .validation { background: #fff3e0; border-color: #f57900; color: #f57900; }
+        .feedback { background: #fce4ec; border-color: #c2185b; color: #c2185b; }
+        .end { background: #c8e6c9; border-color: #2e7d32; color: #2e7d32; }
+        
+        .arrow {
+            color: #000;
+            font-size: 32px;
+            font-weight: 900;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .arrow-down {
+            transform: rotate(90deg);
+        }
+        
+        .connecting-line {
+            width: 3px;
+            height: 20px;
+            background: #000;
+            margin: 0 auto;
+        }
+        
+        .horizontal-line {
+            height: 3px;
+            width: 100px;
+            background: #000;
+            margin: 10px 0;
+        }
+        
+        .branch-label {
+            font-size: 12px;
+            color: #666;
+            font-weight: normal;
+            margin: 0 10px;
+            padding: 2px 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .parallel-flows {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+            margin: 20px 0;
+            gap: 40px;
+        }
+        
+        .flow-branch {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .convergence {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            margin: 30px 0;
+            gap: 20px;
+            position: relative;
+        }
+        
+        .convergence::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(to right, #000 0%, #000 30%, transparent 30%, transparent 70%, #000 70%, #000 100%);
+        }
+        
+        .convergence .connecting-line {
+            height: 40px;
+        }
+        
+        .legend {
+            margin: 20px 0 40px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .legend h3 {
+            color: #495057;
+            margin-bottom: 15px;
+        }
+        
+        .legend-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 2px solid;
+        }
+        
+        @media (max-width: 768px) {
+            .flow-row {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .parallel-flows {
+                flex-direction: column;
+            }
+            
+            .node {
+                min-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>System Flow Visualization</h2>
+        
+        <div class="legend">
+            <h3>Flow Chart Legend</h3>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <div class="legend-color start" style="background: #e1f5fe; border-color: #01579b;"></div>
+                    <span>Entry Point</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color decision" style="background: #fff3e0; border-color: #e65100;"></div>
+                    <span>Decision Point</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color process" style="background: #f3e5f5; border-color: #4a148c;"></div>
+                    <span>Processing Step</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color validation" style="background: #fff3e0; border-color: #f57900;"></div>
+                    <span>Validation</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color feedback" style="background: #fce4ec; border-color: #c2185b;"></div>
+                    <span>Visual Feedback</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color end" style="background: #c8e6c9; border-color: #2e7d32;"></div>
+                    <span>Final Output</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flowchart">
+            <!-- Entry Point -->
+            <div class="flow-row">
+                <div class="node start">User Action</div>
+            </div>
+            
+            <div class="connecting-line"></div>
+            
+            <!-- Decision Point -->
+            <div class="flow-row">
+                <div class="node decision">Input Type?</div>
+            </div>
+            
+            <div class="connecting-line"></div>
+            
+            <!-- Three Main Branches -->
+            <div class="parallel-flows">
+                <!-- Checkbox Branch -->
+                <div class="flow-branch">
+                    <div class="branch-label">Checkbox Selection</div>
+                    <div class="connecting-line"></div>
+                    <div class="node process">Box Toggle Function</div>
+                    <div class="connecting-line"></div>
+                    <div class="node process">Evaluate Cache</div>
+                    <div class="connecting-line"></div>
+                    <div class="node process">Update Display</div>
+                    <div class="connecting-line"></div>
+                    <div class="node process">Set Calculation Mode</div>
+                    <div class="connecting-line"></div>
+                    <div class="node process">Run Calculations</div>
+                </div>
+                
+                <!-- Value Entry Branch -->
+                <div class="flow-branch">
+                    <div class="branch-label">Value Entry</div>
+                    <div class="connecting-line"></div>
+                    <div class="node process">Function Sequence</div>
+                    <div class="connecting-line"></div>
+                    <div class="node process">Detect Input Mode</div>
+                    <div class="connecting-line"></div>
+                    <div class="node decision">Mode Active?</div>
+                    <div class="flow-row">
+                        <div style="display: flex; gap: 20px; align-items: center;">
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                                <div class="branch-label">Yes</div>
+                                <div class="connecting-line"></div>
+                                <div class="node process">Run Inputs Function</div>
+                                <div class="connecting-line"></div>
+                                <div class="node process">Calculate Based on Mode</div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                                <div class="branch-label">No</div>
+                                <div class="connecting-line"></div>
+                                <div class="node process">Run Line Items</div>
+                                <div class="connecting-line"></div>
+                                <div class="node process">Sum Array Values</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Staff Number Branch -->
+                <div class="flow-branch">
+                    <div class="branch-label">Staff Number</div>
+                    <div class="connecting-line"></div>
+                    <div class="node process">Staff Toggle</div>
+                    <div class="connecting-line"></div>
+                    <div class="node process">Get Calculator Cache</div>
+                    <div class="connecting-line"></div>
+                    <div class="node decision">Staff Count Valid?</div>
+                    <div class="flow-row">
+                        <div style="display: flex; gap: 20px; align-items: center;">
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                                <div class="branch-label">Yes</div>
+                                <div class="connecting-line"></div>
+                                <div class="node process">Show Salary Fields</div>
+                                <div class="connecting-line"></div>
+                                <div class="node process">Process Salary Details</div>
+                                <div class="connecting-line"></div>
+                                <div class="node process">Format Results</div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                                <div class="branch-label">No</div>
+                                <div class="connecting-line"></div>
+                                <div class="node process">Reset Calculator</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Convergence Point -->
+            <div class="convergence">
+                <div class="connecting-line" style="margin-left: -100px;"></div>
+                <div class="connecting-line"></div>
+                <div class="connecting-line" style="margin-right: -100px;"></div>
+            </div>
+            
+            <!-- Common Processing Path -->
+            <div class="flow-row">
+                <div class="node process">Value Handler</div>
+            </div>
+            
+            <div class="connecting-line"></div>
+            
+            <div class="flow-row">
+                <div class="node process">Calculate Fees</div>
+            </div>
+            
+            <div class="connecting-line"></div>
+            
+            <div class="flow-row">
+                <div class="node process">Generate Grand Totals</div>
+            </div>
+            
+            <div class="connecting-line"></div>
+            
+            <div class="flow-row">
+                <div class="node process">Update Fields</div>
+            </div>
+            
+            <div class="connecting-line"></div>
+            
+            <div class="flow-row">
+                <div class="node validation">Validate Totals</div>
+            </div>
+            
+            <div class="connecting-line"></div>
+            
+            <div class="flow-row">
+                <div class="node feedback">Apply Visual Feedback</div>
+            </div>
+            
+            <div class="connecting-line"></div>
+            
+            <div class="flow-row">
+                <div class="node process">Cache Results</div>
+            </div>
+            
+            <div class="connecting-line"></div>
+            
+            <div class="flow-row">
+                <div class="node end">Update UI</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add interactive hover effects and click functionality
+        document.querySelectorAll('.node').forEach(node => {
+            node.addEventListener('click', function() {
+                // Create a subtle pulse effect
+                this.style.animation = 'pulse 0.6s ease-in-out';
+                setTimeout(() => {
+                    this.style.animation = '';
+                }, 600);
+            });
+        });
+
+        // Add CSS animation for pulse effect
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+                100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
